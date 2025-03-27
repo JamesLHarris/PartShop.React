@@ -107,17 +107,22 @@ function HomeHeader() {
     <div className="home-header">
       <header className="App-header">
         <img src={quantumForgeLogo} className="App-logo" alt="Quantum Forge" />
-        <div className="header-controls">
+
+        <div className="header-row">
           <nav className="nav-links">
             <a href="/">Home</a>
             <a href="/recent">Recently Listed</a>
-            <a href="/contact">Contact Us</a>
-            <a href="/about">About Us</a>
           </nav>
-          <nav className="top-selection">
+
+          <div className="top-selection">
             {modelsData.optionsComponents}
             {makeData.optionsComponents}
             {catagoryData.optionsComponents}
+          </div>
+
+          <nav className="nav-links end-links">
+            <a href="/contact">Contact Us</a>
+            <a href="/about">About Us</a>
           </nav>
         </div>
       </header>

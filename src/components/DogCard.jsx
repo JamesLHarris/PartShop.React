@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Button } from "react-bootstrap";
+import { Card } from "react-bootstrap";
 import "./CardStyles.css";
 
 function DogCard(props) {
@@ -7,6 +7,8 @@ function DogCard(props) {
     // Placeholder handler
     console.log("Selected:", props.name);
   };
+
+  const formattedPrice = `$${parseFloat(props.price).toFixed(2)}`;
 
   return (
     <div className="single-item">
@@ -17,19 +19,19 @@ function DogCard(props) {
             <img src={props.photo} className="item-image" alt="item" />
           </Card.Title>
           <Card.Text>
-            <p className="card-text">{props.desc}</p>
+            <div className="condition-price-row">
+              <p className="card-text">{props.condition}</p>
+              <p className="card-price">{formattedPrice}</p>
+            </div>
           </Card.Text>
           <hr className="card-divider" />
         </Card.Body>
 
         <Card.Footer>
           <p className="part-name">{props.name}</p>
-          <Button
-            className="card-button btn btn-warning"
-            onClick={partClickEvent}
-          >
+          <button className="card-button " onClick={partClickEvent}>
             View
-          </Button>
+          </button>
         </Card.Footer>
       </Card>
     </div>

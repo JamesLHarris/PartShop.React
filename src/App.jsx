@@ -4,6 +4,7 @@ import BasicCard from "./components/BasicCard";
 import Layout from "./components/Layout";
 import React from "react";
 import HomeHeader from "./components/HomeHeader";
+import Home from "./components/Home";
 
 function App() {
   return (
@@ -13,8 +14,9 @@ function App() {
           <HomeHeader />
         </header>
         <Routes>
-          <Route path="/" element={<Navigate to="/home/stock" />} />
-          <Route path="/home" element={<Layout />} />
+          <Route path="/" element={<Navigate to="/home" />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/recent" element={<Layout />} />
           <Route path="/home/stock" element={<Layout />} />
           <Route path="/home/make" element={<Layout />} />
           <Route path="/BasicCard" element={<BasicCard />} />

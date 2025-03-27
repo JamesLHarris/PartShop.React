@@ -17,7 +17,8 @@ function PartCard(props) {
             <img src={props.photo} className="item-image" alt="item" />
           </Card.Title>
           <Card.Text>
-            <p className="card-text">{props.desc}</p>
+            <p className="card-text">{props.condition}</p>
+            <p className="card-price">{props.price}</p>
           </Card.Text>
           <hr className="card-divider" />
         </Card.Body>

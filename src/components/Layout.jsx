@@ -14,30 +14,34 @@ function Layout() {
   var dog1 = {
     name: "Porsche 911 S 2.7 L Engine ",
     model: "911",
-    description: "USED",
+    condition: "USED",
     descriptionId: 2,
     photo: engine,
+    price: 20.0,
   };
   var dog2 = {
     name: "Porsche Cayenne Washer Reservoir Cap",
     model: "Bolt",
-    description: "NEW",
+    condition: "NEW",
     descriptionId: 3,
     photo: reservoirCap,
+    price: 13.62,
   };
   var dog3 = {
     name: "Porsche 911 / Boxster / Cayman Wheel Lug Bolt (45 mm)",
     model: "Bolt",
-    description: "NEW",
+    condition: "NEW",
     descriptionId: 3,
     photo: lugNut,
+    price: 27.89,
   };
   var dog4 = {
     name: "Porsche 911 Center Console with Switches",
     model: "Bolt",
-    description: "USED",
+    condition: "USED",
     descriptionId: 2,
     photo: centerConsole,
+    price: 2.48,
   };
 
   var dogArray = [dog1, dog2, dog3, dog4, dog1, dog2, dog3, dog4];
@@ -62,9 +66,10 @@ function Layout() {
       <DogCard
         name={dog.name}
         breed={dog.model}
-        desc={dog.description}
+        condition={dog.condition}
         descId={dog.descriptionId}
         photo={dog.photo}
+        price={dog.price}
       />
     );
   };
@@ -74,7 +79,7 @@ function Layout() {
       <PartCard
         name={part.name}
         breed={part.make.company}
-        desc={part.description}
+        condition={part.condition}
         photo={part.photo}
       />
     );

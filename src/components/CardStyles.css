@@ -1,8 +1,12 @@
 /* CardStyles.css */
 
 .single-item {
-  width: 300px;
-  margin: 10px;
+  width: 100%;
+  height: 460px;
+  margin: 0;
+  padding: 16px;
+  font-size: 1.05rem;
+  box-sizing: border-box;
 }
 
 /* Bootstrap Card Override */
@@ -32,13 +36,6 @@
   object-fit: cover;
   border-radius: 4px;
   background-color: #1c1c1c; /* fallback bg if image fails to load */
-}
-
-/* Text Description */
-.card-text {
-  font-size: 14px;
-  color: #ccc;
-  margin-top: 10px;
 }
 
 .card-divider {
@@ -75,14 +72,37 @@
 
 /* Button */
 .card-button {
-  width: 100%;
-  background-color: var(--accent-color, #f0ad4e);
-  color: #1c1c1c;
-  font-weight: 600;
+  background-color: #f0ad4e;
   border: none;
+  color: #222;
+  font-weight: bold;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  width: 100%;
 }
 
 .card-button:hover {
   background-color: #e69526;
   color: #000;
+}
+
+.condition-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-text {
+  margin: 0;
+  font-weight: 500;
+  color: #ccc;
+}
+
+.card-price {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #f0ad4e;
 }

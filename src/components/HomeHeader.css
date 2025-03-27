@@ -1,64 +1,37 @@
-/* Header outer wrapper */
-.home-header {
-  background-color: #1c1c1c;
-  border-bottom: 1px solid #444;
-  padding: 30px 20px;
-}
-
-/* Flex column centered content */
 .App-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
-  gap: 20px;
+  padding: 16px;
+  gap: 18px;
 }
 
-.header-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center; /* 👈 this ensures they’re aligned on the y-axis */
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-/* Logo */
 .App-logo {
-  height: 200px;
-  width: 1000px;
+  width: 300px;
+  height: auto;
   object-fit: contain;
 }
 
-.logo-wrapper {
+.header-row {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 20px;
+  flex-direction: row;
+  border-bottom: 1px solid #444; /* 👈 subtle gray line */
+  padding-bottom: 50px; /* gives breathing room above the line */
+  margin-bottom: 10px; /* separates it from content below */
 }
 
-/* Dropdown area */
+.nav-links,
 .top-selection {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
-}
-
-.header-title {
-  color: #eee;
-  font-size: 24px;
-  font-weight: 600;
+  gap: 15px;
+  flex-wrap: wrap;
   margin: 0;
-}
-
-/* Nav Links */
-.nav-links {
-  display: flex;
-  gap: 25px;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 15px;
+  padding: 0;
 }
 
 .nav-links a {
@@ -70,31 +43,31 @@
   font-weight: 600;
   border-radius: 4px;
   text-decoration: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
-
-  /* 👇 Add these to match dropdown button alignment */
   height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-}
-
-.nav-links a::after {
-  content: "";
-  position: absolute;
-  width: 0%;
-  height: 2px;
-  background-color: #3f8cff;
-  bottom: -2px;
-  left: 0;
-  transition: width 0.3s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  position: relative;
+  text-decoration: none;
 }
 
 .nav-links a:hover {
   background-color: #333;
   color: #3f8cff;
   border-color: #3f8cff;
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background-color: #3f8cff; /* Bright blue */
+  transition: width 0.3s ease;
 }
 
 .nav-links a:hover::after {
