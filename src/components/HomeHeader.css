@@ -1,0 +1,102 @@
+/* Header outer wrapper */
+.home-header {
+  background-color: #1c1c1c;
+  border-bottom: 1px solid #444;
+  padding: 30px 20px;
+}
+
+/* Flex column centered content */
+.App-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  gap: 20px;
+}
+
+.header-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center; /* 👈 this ensures they’re aligned on the y-axis */
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Logo */
+.App-logo {
+  height: 200px;
+  width: 1000px;
+  object-fit: contain;
+}
+
+.logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Dropdown area */
+.top-selection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-title {
+  color: #eee;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Nav Links */
+.nav-links {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.nav-links a {
+  background-color: transparent;
+  color: white;
+  border: 1px solid #555;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  /* 👇 Add these to match dropdown button alignment */
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  width: 0%;
+  height: 2px;
+  background-color: #3f8cff;
+  bottom: -2px;
+  left: 0;
+  transition: width 0.3s ease;
+}
+
+.nav-links a:hover {
+  background-color: #333;
+  color: #3f8cff;
+  border-color: #3f8cff;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
