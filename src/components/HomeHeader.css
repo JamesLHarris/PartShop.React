@@ -73,3 +73,19 @@
 .nav-links a:hover::after {
   width: 100%;
 }
+
+.admin-link {
+  background-color: #7e3131;
+  color: #7e3131;
+  border-color: #7e3131;
+}
+
+.admin-link a:hover {
+  background-color: #333333;
+  color: #c2c505;
+  border-color: #c2c505;
+}
+
+.admin-link a:hover::after {
+  width: 100%;
+}

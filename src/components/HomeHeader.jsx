@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import quantumForgeLogo from "../quantumForgeLogo.jpeg";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import toastr from "toastr";
 import modelService from "../service/modelService";
 import makeService from "../service/makeService";
@@ -26,31 +26,21 @@ function HomeHeader() {
     optionsComponents: [],
   });
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  const navToOption = (option) => {
-    navigate(option);
-  };
-
-  const handleOptionSelect = (event) => {
-    const selectedValue = event.target.value;
-    // Call your function here with the selected value
-    console.log("FIRST OPTIONS", selectedValue);
-    //navToOption(selectedValue);
-  };
+  // const navToOption = (option) => {
+  //   navigate(option);
+  // };
 
   const mapModelOptions = (option) => {
-    console.log("DropDownModelOptions", option);
     return <ModelDropDown data={option} />;
   };
 
   const mapMakeOptions = (option) => {
-    console.log("DropDownMakeOptions", option);
     return <MakeDropDown data={option} />;
   };
 
   const mapCatagoryOptions = (option) => {
-    console.log("DropDownCatagoryOptions", option);
     return <CatagoryDropDown data={option} />;
   };
 
@@ -123,6 +113,9 @@ function HomeHeader() {
           <nav className="nav-links end-links">
             <a href="/contact">Contact Us</a>
             <a href="/about">About Us</a>
+          </nav>
+          <nav className="nav-links admin-link">
+            <a href="/admin">Admin</a>
           </nav>
         </div>
       </header>
