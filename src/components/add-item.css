@@ -1,13 +1,12 @@
 .add-container {
-  max-width: 100%;
-  width: 100%;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  padding: 20px;
   box-sizing: border-box;
   background-color: #1c1c1c; /* Dark but not pitch black */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  max-width: 40%;
+  margin: 0 auto;
 }
 
 .add-image {
@@ -105,14 +104,31 @@
 }
 
 .part-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .full-width {
   grid-column: span 2;
+}
+
+.image-preview {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview img {
+  width: 300px;
+  height: auto;
+  border-radius: 4px;
+  margin-bottom: 12px;
 }
 
 input[type="file"] {

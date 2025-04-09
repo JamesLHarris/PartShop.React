@@ -20,12 +20,14 @@ function AddItem() {
     optionsComponents: [],
   });
 
+  const [isMakeSelected, setIsMakeSelected] = useState(false);
+
   const mapModelOptions = (option) => {
     return <ModelDropDown data={option} />;
   };
 
   const mapMakeOptions = (option) => {
-    return <MakeDropDown data={option} />;
+    return <MakeDropDown data={option} onChange={handleMakeSelect} />;
   };
 
   useEffect(() => {
@@ -54,6 +56,15 @@ function AddItem() {
       pd.optionsUnmapped = getData;
       return pd;
     });
+  };
+
+  const handleMakeSelect = (event) => {
+    const selected = event.target.value;
+    if (selected && selected !== "") {
+      setIsMakeSelected(true);
+    } else {
+      setIsMakeSelected(false);
+    }
   };
 
   const onGetError = () => {
@@ -130,7 +141,6 @@ function AddItem() {
                   onChange={handleChange}
                 />
               </div>
-
               <div>
                 <label>Year:</label>
                 <input
@@ -140,7 +150,6 @@ function AddItem() {
                   onChange={handleChange}
                 />
               </div>
-
               <div>
                 <label>Part Number:</label>
                 <input
@@ -149,7 +158,6 @@ function AddItem() {
                   onChange={handleChange}
                 />
               </div>
-
               <div>
                 <label>Description:</label>
                 <textarea
@@ -158,7 +166,6 @@ function AddItem() {
                   onChange={handleChange}
                 />
               </div>
-
               <div>
                 <label>Price:</label>
                 <input
@@ -169,9 +176,8 @@ function AddItem() {
                   onChange={handleChange}
                 />
               </div>
-
-              <div className="full-width">{modelsData.optionsComponents}</div>
               <div className="full-width">{makeData.optionsComponents}</div>
+              <div className="full-width">{modelsData.optionsComponents}</div>
             </form>
 
             <hr className="admin-divider" />
