@@ -8,6 +8,7 @@ import makeService from "../service/makeService";
 import toastr from "toastr";
 import ModelDropDown from "./ModelDropDown";
 import MakeDropDown from "./MakeDropDown";
+import MakeModelSelector from "./MakeModelSelector";
 
 function AddItem() {
   const [modelsData, setModelsData] = useState({
@@ -112,6 +113,11 @@ function AddItem() {
     console.log("I Clicked the Submit button", formData);
   };
 
+  const handleMakeModelChange = ({ makeId, modelId }) => {
+    console.log("Selected:", makeId, modelId);
+    // Optionally set into state for form submission
+  };
+
   return (
     <div className="add-container">
       <div className="add-action">
@@ -176,8 +182,7 @@ function AddItem() {
                   onChange={handleChange}
                 />
               </div>
-              <div className="full-width">{makeData.optionsComponents}</div>
-              <div className="full-width">{modelsData.optionsComponents}</div>
+              <MakeModelSelector onSelectionChange={handleMakeModelChange} />
             </form>
 
             <hr className="admin-divider" />
