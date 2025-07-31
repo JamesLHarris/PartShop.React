@@ -9,6 +9,9 @@ import toastr from "toastr";
 import ModelDropDown from "./ModelDropDown";
 import MakeDropDown from "./MakeDropDown";
 import MakeModelSelector from "./MakeModelSelector";
+import LocationSelector from "./LocationSelector";
+import catagoryService from "../service/catagoryService";
+import partsService from "../service/partsService";
 
 function AddItem() {
   const [modelsData, setModelsData] = useState({
@@ -22,6 +25,7 @@ function AddItem() {
   });
 
   const [isMakeSelected, setIsMakeSelected] = useState(false);
+  const [catagoryOptions, setCatagoryOptions] = useState([]);
 
   const mapModelOptions = (option) => {
     return <ModelDropDown data={option} />;
@@ -32,21 +36,13 @@ function AddItem() {
   };
 
   useEffect(() => {
-    modelService.getAllModels().then(onGetModelSuccess).catch(onGetError);
+    makeService.getAllCompanies().then(onGetMakeSuccess).catch(onGetError);
   }, []);
 
-  const onGetModelSuccess = (response) => {
-    let getData = response.item;
-    setModelsData((prevState) => {
-      const pd = { ...prevState };
-      pd.optionsComponents = mapModelOptions(getData);
-      pd.optionsUnmapped = getData;
-      return pd;
-    });
-  };
-
   useEffect(() => {
-    makeService.getAllCompanies().then(onGetMakeSuccess).catch(onGetError);
+    catagoryService.getAllCatagories().then((res) => {
+      setCatagoryOptions(res.item);
+    });
   }, []);
 
   const onGetMakeSuccess = (response) => {
@@ -96,6 +92,14 @@ function AddItem() {
     partNumber: "",
     description: "",
     price: "",
+    makeId: "",
+    modelId: "",
+    catagoryId: "",
+    locationId: "",
+    availableId: 1, // default "Available"
+    rusted: false,
+    tested: false,
+    lastMovedBy: 1, // placeholder for now
   });
 
   const handleChange = (e) => {
@@ -108,14 +112,41 @@ function AddItem() {
 
   const navigate = useNavigate();
 
-  const clickEvent = () => {
-    navigate("home");
-    console.log("I Clicked the Submit button", formData);
+  const submitEvent = () => {
+    const payload = new FormData();
+    console.log("Form Data Being Sent", formData);
+    Object.entries(formData).forEach(([key, value]) => {
+      // Ensure booleans are sent as strings for FormData
+      payload.append(
+        key,
+        typeof value === "boolean" ? value.toString() : value
+      );
+    });
+
+    if (file && file.name) {
+      payload.append("image", file); // image must match API param name
+    }
+
+    partsService
+      .addPart(payload)
+      .then(() => {
+        toastr.success("Part added successfully!");
+        console.log("Successful Payload", payload);
+        navigate("/home");
+      })
+      .catch((err) => {
+        console.error("Submission failed", err);
+        console.log("Error Payload", payload);
+        toastr.error("Failed to add part.");
+      });
   };
 
   const handleMakeModelChange = ({ makeId, modelId }) => {
-    console.log("Selected:", makeId, modelId);
-    // Optionally set into state for form submission
+    setFormData((prev) => ({
+      ...prev,
+      makeId,
+      modelId,
+    }));
   };
 
   return (
@@ -132,6 +163,7 @@ function AddItem() {
                 />
                 <input
                   type="file"
+                  name="Photo"
                   onChange={handleImageChange}
                   accept="image/*"
                 />
@@ -151,7 +183,6 @@ function AddItem() {
                 <label>Year:</label>
                 <input
                   name="year"
-                  type="number"
                   value={formData.year}
                   onChange={handleChange}
                 />
@@ -176,21 +207,78 @@ function AddItem() {
                 <label>Price:</label>
                 <input
                   name="price"
-                  type="number"
-                  step="0.01"
                   value={formData.price}
                   onChange={handleChange}
                 />
               </div>
+              <div>
+                <label>Category:</label>
+                <select
+                  name="catagoryId"
+                  value={formData.catagoryId}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Category</option>
+                  {catagoryOptions.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <MakeModelSelector onSelectionChange={handleMakeModelChange} />
+
+              <div className="checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="rusted"
+                    checked={formData.rusted}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        rusted: e.target.checked,
+                      }))
+                    }
+                  />
+                  Rusted
+                </label>
+
+                <label>
+                  <input
+                    type="checkbox"
+                    name="tested"
+                    checked={formData.tested}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        tested: e.target.checked,
+                      }))
+                    }
+                  />
+                  Tested
+                </label>
+              </div>
+
+              <LocationSelector
+                onChange={(loc) => {
+                  if (loc?.boxId) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      locationId: parseInt(loc.boxId),
+                    }));
+                  }
+                }}
+              />
             </form>
 
             <hr className="admin-divider" />
           </Card.Body>
           <Card.Footer>
             <p className="admin-footer"></p>
-            <button className="admin-button" onClick={clickEvent}>
-              Next
+            <button className="admin-button" onClick={submitEvent}>
+              Submit
             </button>
           </Card.Footer>
         </Card>

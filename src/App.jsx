@@ -6,6 +6,7 @@ import HomeHeader from "./components/HomeHeader";
 import Home from "./components/Home";
 import AdminActions from "./components/AdminActions";
 import AddItem from "./components/AddItem";
+import Login from "./components/Login";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/home/make" element={<Layout />} />
           <Route path="/admin" element={<AdminActions />} />
           <Route path="/admin/add" element={<AddItem />} />
+          <Route path="/Login" element={<Login />} />
         </Routes>
       </div>
     </BrowserRouter>

@@ -21,11 +21,10 @@ const deletePart = (id) => {
 const addPart = (payload) => {
   const config = {
     method: "POST",
-    url: `${partsEndpoint}/addNew`,
+    url: `${partsEndpoint}/add-new`,
     data: payload,
     withCredentials: true,
     crossdomain: true,
-    headers: { "Content-Type": "application/json" },
   };
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };

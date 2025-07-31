@@ -28,8 +28,8 @@ function Layout() {
     price: 13.62,
   };
   var dog3 = {
-    name: "Porsche 911 / Boxster / Cayman Wheel Lug Bolt (45 mm)",
-    model: "Bolt",
+    name: " Lug Bolt (45 mm)",
+    model: "Porsche 911 / Boxster / Cayman Wheel",
     condition: "NEW",
     descriptionId: 3,
     photo: lugNut,

@@ -11,7 +11,9 @@ function PartCard(props) {
   return (
     <div className="single-item">
       <Card>
-        <Card.Header />
+        <Card.Header>
+          <div>Porsche 911 / Boxster / Cayman Wheel</div>
+        </Card.Header>
         <Card.Body>
           <Card.Title>
             <img src={props.photo} className="item-image" alt="item" />

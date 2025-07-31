@@ -5,7 +5,7 @@ import "./CardStyles.css";
 function DogCard(props) {
   const partClickEvent = () => {
     // Placeholder handler
-    console.log("Selected:", props.name);
+    console.log("Selected:", props);
   };
 
   const formattedPrice = `$${parseFloat(props.price).toFixed(2)}`;
@@ -13,7 +13,7 @@ function DogCard(props) {
   return (
     <div className="single-item">
       <Card>
-        <Card.Header />
+        <Card.Header></Card.Header>
         <Card.Body>
           <Card.Title>
             <img src={props.photo} className="item-image" alt="item" />

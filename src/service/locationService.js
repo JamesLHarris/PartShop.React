@@ -5,12 +5,12 @@ import {
   API_HOST_PREFIX,
 } from "./serviceHelpers";
 
-const modelEndpoint = `${API_HOST_PREFIX}/api/models`;
+const locationEndpoint = `${API_HOST_PREFIX}/api/locations`;
 
-const deleteModel = (id) => {
+const deleteLocation = (id) => {
   const config = {
     method: "DELETE",
-    url: `${modelEndpoint}/${id}`,
+    url: `${locationEndpoint}/${id}`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -18,10 +18,10 @@ const deleteModel = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const addModel = (payload) => {
+const addLocation = (payload) => {
   const config = {
     method: "POST",
-    url: `${modelEndpoint}/add-new`,
+    url: `${locationEndpoint}/new-location`,
     data: payload,
     withCredentials: true,
     crossdomain: true,
@@ -30,10 +30,11 @@ const addModel = (payload) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getModelById = (id) => {
+const updateLocation = (id, payload) => {
   const config = {
-    method: "GET",
-    url: `${modelEndpoint}/${id}`,
+    method: "PUT",
+    url: `${locationEndpoint}/${id}`,
+    data: payload,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -41,10 +42,10 @@ const getModelById = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getAllModelsByMakeId = (id) => {
+const getAllLocations = () => {
   const config = {
     method: "GET",
-    url: `${modelEndpoint}/make/${id}`,
+    url: `${locationEndpoint}/all`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -52,10 +53,10 @@ const getAllModelsByMakeId = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getAllModels = () => {
+const getLocationById = (id) => {
   const config = {
     method: "GET",
-    url: `${modelEndpoint}/available`,
+    url: `${locationEndpoint}/${id}`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -63,12 +64,24 @@ const getAllModels = () => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const modelService = {
-  deleteModel,
-  addModel,
-  getModelById,
-  getAllModelsByMakeId,
-  getAllModels,
+const getLocationHierarchyBySiteId = (id) => {
+  const config = {
+    method: "GET",
+    url: `${locationEndpoint}/hierarchy/${id}`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-export default modelService;
+const locationService = {
+  deleteLocation,
+  addLocation,
+  updateLocation,
+  getAllLocations,
+  getLocationById,
+  getLocationHierarchyBySiteId,
+};
+
+export default locationService;

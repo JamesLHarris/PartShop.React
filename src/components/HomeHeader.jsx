@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import quantumForgeLogo from "../quantumForgeLogo.jpeg";
-// import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import toastr from "toastr";
 import modelService from "../service/modelService";
 import makeService from "../service/makeService";
@@ -9,6 +9,7 @@ import ModelDropDown from "./ModelDropDown";
 import MakeDropDown from "./MakeDropDown";
 import CatagoryDropDown from "./CatagoryDropDown";
 import "./HomeHeader.css";
+import { FaUser, FaSignOutAlt } from "react-icons/fa";
 
 function HomeHeader() {
   const [modelsData, setModelsData] = useState({
@@ -26,11 +27,18 @@ function HomeHeader() {
     optionsComponents: [],
   });
 
-  // const navigate = useNavigate();
+  const [userId, setUserId] = useState(null);
 
-  // const navToOption = (option) => {
-  //   navigate(option);
-  // };
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const id = localStorage.getItem("userId");
+    if (id) {
+      setUserId(id);
+    }
+  }, []);
+
+  const handleLoginClick = () => navigate("/login");
 
   const mapModelOptions = (option) => {
     return <ModelDropDown data={option} />;
@@ -89,6 +97,13 @@ function HomeHeader() {
     });
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("userId");
+    localStorage.removeItem("isLoggedIn");
+    setUserId(null);
+    navigate("/");
+  };
+
   const onGetError = () => {
     toastr.error("Failed to load surveys on AnswersPage.", "Error");
   };
@@ -103,7 +118,21 @@ function HomeHeader() {
             <a href="/">Home</a>
             <a href="/recent">Recently Listed</a>
           </nav>
-
+          {!userId ? (
+            <button className="login-button" onClick={handleLoginClick}>
+              Login
+            </button>
+          ) : (
+            <div className="user-controls">
+              <div className="user-indicator">
+                <FaUser style={{ marginRight: "6px" }} />
+                <span>User #{userId}</span>
+              </div>
+              <button className="logout-button" onClick={handleLogout}>
+                <FaSignOutAlt />
+              </button>
+            </div>
+          )}
           <div className="top-selection">
             {modelsData.optionsComponents}
             {makeData.optionsComponents}

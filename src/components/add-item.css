@@ -169,3 +169,20 @@ html {
   margin: 0;
   padding: 0;
 }
+
+.checkbox-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background-color: #2b2b2b;
+  font-weight: 500;
+}

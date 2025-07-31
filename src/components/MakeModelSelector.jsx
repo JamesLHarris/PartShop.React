@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import makeService from "../service/makeService";
 import modelService from "../service/modelService";
 
@@ -8,75 +8,54 @@ function MakeModelSelector({ onSelectionChange }) {
   const [selectedMakeId, setSelectedMakeId] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
 
-  // Fetch all makes on mount
   useEffect(() => {
-    makeService.getAllCompanies().then(onGetMakeSuccess).catch(onError);
+    makeService.getAllCompanies().then((res) => {
+      setMakes(res.item);
+    });
   }, []);
 
-  const onGetMakeSuccess = (response) => {
-    setMakes(response.item || []);
-  };
-
-  // Fetch models for selected make
-  useEffect(() => {
-    if (selectedMakeId) {
-      modelService
-        .getModelsByMakeId(selectedMakeId)
-        .then(onGetModelsSuccess)
-        .catch(onError);
-    } else {
-      setModels([]);
-    }
-  }, [selectedMakeId]);
-
-  const onGetModelsSuccess = (response) => {
-    setModels(response.item || []);
-  };
-
-  const onError = (err) => {
-    console.error("Dropdown fetch error:", err);
-  };
-
   const handleMakeChange = (e) => {
-    const makeId = e.target.value;
-    setSelectedMakeId(makeId);
-    setSelectedModelId(""); // Reset model
-    onSelectionChange({ makeId, modelId: "" });
+    const newMakeId = e.target.value;
+    setSelectedMakeId(newMakeId);
+    setModels([]); // clear models on make change
+    setSelectedModelId(""); // reset model
+
+    if (newMakeId) {
+      modelService.getAllModelsByMakeId(newMakeId).then((res) => {
+        setModels(res.item);
+      });
+    }
+
+    onSelectionChange({ makeId: newMakeId, modelId: "" });
   };
 
   const handleModelChange = (e) => {
-    const modelId = e.target.value;
-    setSelectedModelId(modelId);
-    onSelectionChange({ makeId: selectedMakeId, modelId });
+    const newModelId = e.target.value;
+    setSelectedModelId(newModelId);
+    onSelectionChange({ makeId: selectedMakeId, modelId: newModelId });
   };
 
   return (
-    <div className="make-model-selector">
-      <div>
-        <label>Make:</label>
-        <select value={selectedMakeId} onChange={handleMakeChange}>
-          <option value="">-- Select Make --</option>
-          {makes.map((make) => (
-            <option key={make.id} value={make.id}>
-              {make.company}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div>
+      <label>Make:</label>
+      <select value={selectedMakeId} onChange={handleMakeChange}>
+        <option value="">Select Make</option>
+        {makes.map((make) => (
+          <option key={make.id} value={make.id}>
+            {make.company}
+          </option>
+        ))}
+      </select>
 
-      {selectedMakeId && (
-        <div>
-          <label>Model:</label>
-          <select value={selectedModelId} onChange={handleModelChange}>
-            <option value="">-- Select Model --</option>
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <label>Model:</label>
+      <select value={selectedModelId} onChange={handleModelChange}>
+        <option value="">Select Model</option>
+        {models.map((model) => (
+          <option key={model.id} value={model.id}>
+            {model.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
