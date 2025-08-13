@@ -99,7 +99,6 @@ function AddItem() {
     availableId: 1, // default "Available"
     rusted: false,
     tested: false,
-    lastMovedBy: 1, // placeholder for now
   });
 
   const handleChange = (e) => {

@@ -8,11 +8,11 @@
 
 /* Grid for parts */
 .part-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
-  margin-bottom: 50px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+
+  padding: 20px;
 }
 
 /* Grid for dog cards */
@@ -69,4 +69,60 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+.pageModifier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px; /* space between the two selectors */
+  margin: 20px 0;
+}
+
+.pageIndex-Selector,
+.pageSize-Selector {
+  background-color: #2e2e2e;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pageIndex-Selector label,
+.pageSize-Selector label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #f1f1f1;
+}
+
+.pageIndex-Selector button,
+.pageSize-Selector button {
+  background-color: #3f8cff;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  margin: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.pageIndex-Selector button:hover,
+.pageSize-Selector button:hover {
+  background-color: #2f6ed6;
+  transform: translateY(-1px);
+}
+
+.pageIndex-Selector button.active,
+.pageSize-Selector button.active {
+  background-color: #ffa733;
+  color: #222;
+  font-weight: bold;
+}
+
+.pageIndex-Selector button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

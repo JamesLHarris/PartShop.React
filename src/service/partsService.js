@@ -40,10 +40,10 @@ const getPartById = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getPartAvailablePaginated = (pageIndex, pageSize) => {
+const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
   const config = {
     method: "GET",
-    url: `${partsEndpoint}/available/paginate?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+    url: `${partsEndpoint}/available?pageIndex=${pageIndex}&pageSize=${pageSize}`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -66,7 +66,7 @@ const partsService = {
   deletePart,
   addPart,
   getPartById,
-  getPartAvailablePaginated,
+  getAllAvailablePartsCustomer,
   getAllParts,
 };
 

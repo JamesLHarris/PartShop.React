@@ -13,7 +13,6 @@ function ModelDropDown(props) {
     setModelData((prevState) => {
       const pd = { ...prevState };
       pd.modelData = getData.data;
-      console.log("ModelDropDownUseEffect", pd);
       return pd;
     });
   }, []);

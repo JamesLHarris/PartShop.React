@@ -118,21 +118,7 @@ function HomeHeader() {
             <a href="/">Home</a>
             <a href="/recent">Recently Listed</a>
           </nav>
-          {!userId ? (
-            <button className="login-button" onClick={handleLoginClick}>
-              Login
-            </button>
-          ) : (
-            <div className="user-controls">
-              <div className="user-indicator">
-                <FaUser style={{ marginRight: "6px" }} />
-                <span>User #{userId}</span>
-              </div>
-              <button className="logout-button" onClick={handleLogout}>
-                <FaSignOutAlt />
-              </button>
-            </div>
-          )}
+
           <div className="top-selection">
             {modelsData.optionsComponents}
             {makeData.optionsComponents}
@@ -143,9 +129,28 @@ function HomeHeader() {
             <a href="/contact">Contact Us</a>
             <a href="/about">About Us</a>
           </nav>
-          <nav className="nav-links admin-link">
-            <a href="/admin">Admin</a>
-          </nav>
+        </div>
+        <div>
+          {!userId ? (
+            <button className="login-button" onClick={handleLoginClick}>
+              Login
+            </button>
+          ) : (
+            <div className="user-controls">
+              <div className="user-indicator">
+                <FaUser style={{ marginRight: "6px" }} />
+                <span>User #{userId}</span>
+              </div>
+
+              <a href="/admin" className="admin-link">
+                Admin
+              </a>
+
+              <button className="logout-button" onClick={handleLogout}>
+                <FaSignOutAlt />
+              </button>
+            </div>
+          )}
         </div>
       </header>
     </div>

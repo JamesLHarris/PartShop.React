@@ -1,38 +1,45 @@
 import React from "react";
-import { Card, Button } from "react-bootstrap";
+import { Card } from "react-bootstrap";
 import "./CardStyles.css";
 
 function PartCard(props) {
   const partClickEvent = () => {
     // Placeholder handler
-    console.log("Selected:", props.name);
+    console.log("Selected:", props);
   };
+
+  const imageUrl = `https://localhost:7274${props.photo}`;
+  const formattedPrice = `$${parseFloat(props.price).toFixed(2)}`;
+  const rustedStatus = props.rusted ? "Rusted" : "Unrusted";
+  const testedStatus = props.tested ? "Tested" : "Untested";
 
   return (
     <div className="single-item">
       <Card>
-        <Card.Header>
-          <div>Porsche 911 / Boxster / Cayman Wheel</div>
-        </Card.Header>
         <Card.Body>
           <Card.Title>
-            <img src={props.photo} className="item-image" alt="item" />
+            <img src={imageUrl} className="item-image" alt="item" />
           </Card.Title>
           <Card.Text>
-            <p className="card-text">{props.condition}</p>
-            <p className="card-price">{props.price}</p>
+            <div className="card-info-wrapper">
+              <div className="card-condition-row">
+                <div className="card-text">
+                  <div>{testedStatus}</div>
+
+                  <div>{rustedStatus}</div>
+                </div>
+              </div>
+              <div className="card-price">{formattedPrice}</div>
+            </div>
           </Card.Text>
           <hr className="card-divider" />
         </Card.Body>
 
         <Card.Footer>
-          <p className="part-name">{props.name}</p>
-          <Button
-            className="card-button btn btn-warning"
-            onClick={partClickEvent}
-          >
+          <div className="part-name">{props.name}</div>
+          <button className="card-button" onClick={partClickEvent}>
             View
-          </Button>
+          </button>
         </Card.Footer>
       </Card>
     </div>

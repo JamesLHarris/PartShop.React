@@ -13,7 +13,6 @@ function MakeDropDown(props) {
     setMakeData((prevState) => {
       const pd = { ...prevState };
       pd.modelData = getData.data;
-      console.log("DropDownUseEffect", pd);
       return pd;
     });
   }, []);

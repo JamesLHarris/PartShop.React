@@ -19,9 +19,10 @@
   align-items: center;
   gap: 20px;
   flex-direction: row;
-  border-bottom: 1px solid #444; /* 👈 subtle gray line */
-  padding-bottom: 50px; /* gives breathing room above the line */
-  margin-bottom: 10px; /* separates it from content below */
+  border-bottom: 1px solid #444; /* subtle gray line */
+  padding-bottom: 50px;
+  margin-bottom: 10px;
+  position: relative; /* allows absolute positioning inside */
 }
 
 .nav-links,
@@ -50,7 +51,6 @@
   box-sizing: border-box;
   transition: background-color 0.2s ease, color 0.2s ease;
   position: relative;
-  text-decoration: none;
 }
 
 .nav-links a:hover {
@@ -66,7 +66,7 @@
   left: 0;
   width: 0%;
   height: 2px;
-  background-color: #3f8cff; /* Bright blue */
+  background-color: #3f8cff;
   transition: width 0.3s ease;
 }
 
@@ -76,18 +76,18 @@
 
 .admin-link {
   background-color: #7e3131;
-  color: #7e3131;
-  border-color: #7e3131;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
 }
 
-.admin-link a:hover {
+.admin-link:hover {
   background-color: #333333;
   color: #c2c505;
-  border-color: #c2c505;
-}
-
-.admin-link a:hover::after {
-  width: 100%;
 }
 
 .login-button {
@@ -105,10 +105,17 @@
   background-color: #1a4fb9;
 }
 
-.user-indicator {
+/* Grouped controls in top-right */
+.user-controls {
   position: absolute;
   top: 16px;
   right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-indicator {
   background-color: #e0e0e0;
   padding: 8px 12px;
   border-radius: 20px;
@@ -120,13 +127,14 @@
 }
 
 .logout-button {
-  background: none;
+  background-color: #f0ad4e;
   border: none;
-  color: #444;
-  font-size: 18px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  color: #222;
+  font-weight: bold;
   cursor: pointer;
 }
-
 .logout-button:hover {
-  color: #d33;
+  background-color: #e69526;
 }
