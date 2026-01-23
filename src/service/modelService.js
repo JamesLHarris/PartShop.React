@@ -55,7 +55,7 @@ const getAllModelsByMakeId = (id) => {
 const getAllModels = () => {
   const config = {
     method: "GET",
-    url: `${modelEndpoint}/available`,
+    url: `${modelEndpoint}/all`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },

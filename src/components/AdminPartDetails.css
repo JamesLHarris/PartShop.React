@@ -1,0 +1,387 @@
+/* =========================
+   Page container & header
+   ========================= */
+.admin-part-details {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+
+  /* Center and constrain width */
+  max-width: 1400px; /* gives room for 3 columns */
+  margin-inline: auto;
+  margin-top: 24px;
+  margin-bottom: 48px;
+}
+
+.apd-header {
+  display: grid;
+  gap: 6px;
+}
+.apd-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.apd-title h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  line-height: 1.25;
+}
+.apd-subtle {
+  color: #9aa0a6;
+  font-size: 0.9rem;
+}
+
+/* =========================
+   Grid & cards
+   ========================= */
+.apd-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+}
+@media (max-width: 980px) {
+  .apd-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.apd-card {
+  background: #1b1b1b;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 16px;
+}
+.apd-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #e6e6e6;
+  border-bottom: 1px solid #2a2a2a;
+  padding-bottom: 8px;
+}
+
+/* Media card */
+.apd-media {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.apd-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #111;
+  border: 1px solid #2a2a2a;
+}
+.apd-photo--empty {
+  display: grid;
+  place-items: center;
+  color: #888;
+  font-size: 0.95rem;
+}
+
+/* Definition list grid */
+.apd-dl {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px 12px;
+}
+.apd-dl dt {
+  color: #a8acb3;
+}
+.apd-dl dd {
+  margin: 0;
+  color: #e6e6e6;
+}
+
+/* Description text */
+.apd-text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* =========================
+   Actions & buttons
+   ========================= */
+.apd-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.apd-btn {
+  background: #2d5bd1;
+  border: 1px solid transparent;
+  color: #fff;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.apd-btn:hover {
+  filter: brightness(1.05);
+}
+
+.apd-btn--outlined {
+  background: transparent;
+  border-color: #3a3a3a;
+  color: #e6e6e6;
+}
+
+.apd-btn--sm {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+/* Inline “link” action */
+.apd-link {
+  margin-left: 10px;
+  border: none;
+  background: none;
+  color: #89b4ff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.apd-link:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   Badges
+   ========================= */
+.apd-badge {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #2a2a2a;
+  background: #222;
+  color: #dcdcdc;
+}
+/* Availability badges */
+.apd-badge--available {
+  background: #16361f;
+  color: #9de6a7;
+  border-color: #235a31;
+}
+
+.apd-badge--unavailable {
+  background: #3a1b1b;
+  color: #f1a5a5;
+  border-color: #5b2a2a;
+}
+
+.apd-badge--pending {
+  background: #3a331b;
+  color: #f3d28a;
+  border-color: #5a4a2a;
+}
+
+/* =========================
+   Inline editors
+   ========================= */
+.apd-input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #121212;
+  color: #e6e6e6;
+  min-width: 120px;
+}
+
+.apd-textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #121212;
+  color: #e6e6e6;
+}
+
+.apd-inline {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.apd-inline-col {
+  display: grid;
+  gap: 8px;
+}
+
+/* Toggle pill buttons for Rusted/Tested */
+.apd-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #3a3a3a;
+  background: #1c1c1c;
+  color: #dcdcdc;
+  cursor: pointer;
+}
+.apd-pill--on {
+  background: #16361f;
+  color: #9de6a7;
+  border-color: #235a31;
+}
+.apd-pill--off {
+  background: #3a1b1b;
+  color: #f1a5a5;
+  border-color: #5b2a2a;
+}
+
+/* =========================
+   Skeleton loader
+   ========================= */
+.apd-skeleton {
+  height: 280px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #1a1a1a, #1f1f1f, #1a1a1a);
+  background-size: 200% 100%;
+  animation: apd-shine 1.2s infinite linear;
+}
+@keyframes apd-shine {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* =========================
+   Modal (Location Picker)
+   ========================= */
+.lp-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 5000;
+}
+.lp-modal {
+  width: min(720px, 92vw);
+  background: #1b1b1b;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.lp-header,
+.lp-footer {
+  padding: 12px 16px;
+}
+.lp-header {
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lp-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.lp-close {
+  background: transparent;
+  border: 0;
+  color: #aaa;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.lp-body {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.lp-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.lp-row select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #121212;
+  color: #e6e6e6;
+}
+.lp-footer {
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Add spacing for small inline action buttons in Meta card */
+.apd-meta .apd-dl dd {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* space between value and buttons */
+  flex-wrap: wrap; /* keep nice wrapping on small screens */
+}
+
+/* Tighten up vertical rhythm inside Meta card */
+.apd-meta .apd-dl > div {
+  margin-bottom: 10px;
+}
+
+/* Adjust the button sizing for uniform look */
+.apd-btn--xs {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  line-height: 1.2;
+}
+
+/* Space between description text and its button */
+.apd-desc {
+  margin-top: 16px; /* space above the whole block */
+}
+
+.apd-desc h4 {
+  margin-bottom: 8px; /* space below the heading */
+}
+
+.apd-desc p {
+  margin-bottom: 12px; /* space between text and button */
+  line-height: 1.5;
+}
+
+/* optional: tighten button size to align with other small actions */
+.apd-desc .apd-btn {
+  margin-top: 4px;
+}
+
+/* ==========
+   Audit Data 
+   ========== */
+
+/* Outer layout: left content column + right audit column */
+.apd-layout {
+  display: grid;
+  gap: 16px;
+  align-items: flex-start;
+  grid-template-columns: minmax(0, 2.5fr) minmax(0, 1.5fr);
+}
+
+/* Left column just holds the existing apd-grid */
+.apd-left {
+  width: 100%;
+}
+
+/* Right column audit card */
+.apd-audit-column {
+  max-height: 800px;
+  overflow: auto;
+}
+
+/* On smaller screens, stack everything */
+@media (max-width: 1100px) {
+  .apd-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Put audit under the main grid on narrow screens */
+  .apd-audit-column {
+    order: 2;
+  }
+}

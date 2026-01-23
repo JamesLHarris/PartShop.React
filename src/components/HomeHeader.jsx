@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import quantumForgeLogo from "../quantumForgeLogo.jpeg";
+import quantumForgeLogo from "../itemPhotos/Tig_Teddy.png";
 import { useNavigate } from "react-router-dom";
 import toastr from "toastr";
 import modelService from "../service/modelService";
@@ -10,8 +10,13 @@ import MakeDropDown from "./MakeDropDown";
 import CatagoryDropDown from "./CatagoryDropDown";
 import "./HomeHeader.css";
 import { FaUser, FaSignOutAlt } from "react-icons/fa";
+import MakeWithModelsFlyout from "./MakeWithModelsFlyout";
+import CartIcon from "./CartIcon";
+import CartDrawer from "./CartDrawer";
 
-function HomeHeader() {
+function HomeHeader({ value, onChange }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const [modelsData, setModelsData] = useState({
     optionsUnmapped: [],
     optionsComponents: [],
@@ -41,15 +46,15 @@ function HomeHeader() {
   const handleLoginClick = () => navigate("/login");
 
   const mapModelOptions = (option) => {
-    return <ModelDropDown data={option} />;
+    return <ModelDropDown data={option} onSelect={handleModelSelect} />;
   };
 
   const mapMakeOptions = (option) => {
-    return <MakeDropDown data={option} />;
+    return <MakeDropDown data={option} onSelect={handleMakeSelect} />;
   };
 
   const mapCatagoryOptions = (option) => {
-    return <CatagoryDropDown data={option} />;
+    return <CatagoryDropDown data={option} onSelect={handleCategorySelect} />;
   };
 
   useEffect(() => {
@@ -67,7 +72,7 @@ function HomeHeader() {
   };
 
   useEffect(() => {
-    makeService.getAllCompanies().then(onGetMakeSuccess).catch(onGetError);
+    makeService.getAllMakes().then(onGetMakeSuccess).catch(onGetError);
   }, []);
 
   const onGetMakeSuccess = (response) => {
@@ -97,6 +102,57 @@ function HomeHeader() {
     });
   };
 
+  const handleRecentlyListedClick = (e) => {
+    e.preventDefault();
+
+    if (onChange) {
+      onChange({
+        makeId: null,
+        modelId: null,
+        categoryId: null,
+        q: "",
+      });
+    }
+
+    navigate("/browse");
+  };
+
+  const handleMakeSelect = (make) => {
+    if (!onChange) return;
+
+    const id = make.id ?? make.Id;
+    onChange({
+      makeId: id,
+      modelId: null,
+      categoryId: null,
+    });
+  };
+
+  const handleModelSelect = (model) => {
+    if (!onChange) return;
+
+    const modelId = model.id ?? model.Id;
+    const makeId = model.makeId ?? model.MakeId ?? value?.makeId ?? null;
+
+    onChange({
+      makeId,
+      modelId,
+      categoryId: null,
+    });
+  };
+
+  const handleCategorySelect = (category) => {
+    if (!onChange) return;
+
+    const categoryId = category.id ?? category.Id;
+
+    onChange({
+      categoryId,
+      makeId: null,
+      modelId: null,
+    });
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("userId");
     localStorage.removeItem("isLoggedIn");
@@ -104,9 +160,34 @@ function HomeHeader() {
     navigate("/");
   };
 
+  const handleCheckout = () => {
+    // Stub for now; later we’ll call POST /api/checkout then redirect to Shopify URL.
+    window.location.href = "/checkout";
+  };
+
   const onGetError = () => {
     toastr.error("Failed to load surveys on AnswersPage.", "Error");
   };
+
+  useEffect(() => {
+    modelService
+      .getAllModels()
+      .then((r) => {
+        console.log("models:", r.item?.length, r.item?.[0]);
+        onGetModelSuccess(r);
+      })
+      .catch(onGetError);
+  }, []);
+
+  useEffect(() => {
+    makeService
+      .getAllMakes()
+      .then((r) => {
+        console.log("makes:", r.item?.length, r.item?.[0]);
+        onGetMakeSuccess(r);
+      })
+      .catch(onGetError);
+  }, []);
 
   return (
     <div className="home-header">
@@ -116,12 +197,18 @@ function HomeHeader() {
         <div className="header-row">
           <nav className="nav-links">
             <a href="/">Home</a>
-            <a href="/recent">Recently Listed</a>
+            <a href="/browse" onClick={handleRecentlyListedClick}>
+              Recently Listed
+            </a>
           </nav>
 
           <div className="top-selection">
+            <MakeWithModelsFlyout
+              makes={makeData.optionsUnmapped}
+              models={modelsData.optionsUnmapped}
+            />
             {modelsData.optionsComponents}
-            {makeData.optionsComponents}
+
             {catagoryData.optionsComponents}
           </div>
 
@@ -129,7 +216,9 @@ function HomeHeader() {
             <a href="/contact">Contact Us</a>
             <a href="/about">About Us</a>
           </nav>
+          <CartIcon onClick={() => setDrawerOpen(true)} />
         </div>
+
         <div>
           {!userId ? (
             <button className="login-button" onClick={handleLoginClick}>
@@ -152,6 +241,12 @@ function HomeHeader() {
             </div>
           )}
         </div>
+
+        <CartDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          onCheckout={handleCheckout}
+        />
       </header>
     </div>
   );

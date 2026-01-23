@@ -5,12 +5,12 @@ import {
   API_HOST_PREFIX,
 } from "./serviceHelpers";
 
-const makeEndpoint = `${API_HOST_PREFIX}/api/makes`;
+const availabilityEndpoint = `${API_HOST_PREFIX}/api/available`;
 
-const deleteMake = (id) => {
+const deleteAvailable = (id) => {
   const config = {
     method: "DELETE",
-    url: `${makeEndpoint}/${id}`,
+    url: `${availabilityEndpoint}/${id}`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -18,10 +18,10 @@ const deleteMake = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const addMake = (payload) => {
+const addAvailable = (payload) => {
   const config = {
     method: "POST",
-    url: `${makeEndpoint}/add-new`,
+    url: `${availabilityEndpoint}/add-catagory`,
     data: payload,
     withCredentials: true,
     crossdomain: true,
@@ -30,10 +30,10 @@ const addMake = (payload) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getMakeById = (id) => {
+const getAvailableById = (id) => {
   const config = {
     method: "GET",
-    url: `${makeEndpoint}/${id}`,
+    url: `${availabilityEndpoint}/${id}`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -41,10 +41,10 @@ const getMakeById = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getAllMakes = () => {
+const getAllAvailabilities = () => {
   const config = {
     method: "GET",
-    url: `${makeEndpoint}/all`,
+    url: `${availabilityEndpoint}/all`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -52,23 +52,11 @@ const getAllMakes = () => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const getAllCompanies = () => {
-  const config = {
-    method: "GET",
-    url: `${makeEndpoint}/companies/all`,
-    withCredentials: true,
-    crossdomain: true,
-    headers: { "Content-Type": "application/json" },
-  };
-  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+const availableService = {
+  deleteAvailable,
+  addAvailable,
+  getAvailableById,
+  getAllAvailabilities,
 };
 
-const makeService = {
-  deleteMake,
-  addMake,
-  getMakeById,
-  getAllMakes,
-  getAllCompanies,
-};
-
-export default makeService;
+export default availableService;

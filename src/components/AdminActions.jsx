@@ -21,13 +21,13 @@ function AdminActions() {
   };
 
   const locatePart = () => {
-    // Placeholder handler
+    navigate("Search");
     console.log("Admin Locate");
   };
 
-  const editPart = () => {
-    // Placeholder handler
-    console.log("Admin Edit");
+  const partOrders = () => {
+    navigate("Orders");
+    console.log("Admin Orders");
   };
 
   return (
@@ -93,8 +93,8 @@ function AdminActions() {
             <hr className="admin-divider" />
           </Card.Body>
           <Card.Footer>
-            <p className="admin-footer">Edit Part</p>
-            <button className="admin-button " onClick={editPart}>
+            <p className="admin-footer">Orders</p>
+            <button className="admin-button " onClick={partOrders}>
               Edit
             </button>
           </Card.Footer>

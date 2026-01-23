@@ -138,3 +138,104 @@
 .logout-button:hover {
   background-color: #e69526;
 }
+
+/* ===== Make fly-out (scoped) ===== */
+.make-dd {
+  position: relative;
+}
+
+.make-dd__btn {
+  background: transparent;
+  color: #eaeaea;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+/* First panel: list of makes */
+.make-dd__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 220px;
+  background: #1f1f1f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 0;
+  margin-top: 8px;
+  list-style: none;
+  z-index: 3000; /* make sure it's on top */
+  display: none;
+}
+
+.make-dd:hover > .make-dd__menu,
+.make-dd:focus-within > .make-dd__menu {
+  display: block;
+}
+
+.make-dd__item {
+  position: relative;
+}
+
+.make-dd__link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: transparent;
+  color: #eaeaea;
+  border: 0;
+  cursor: pointer;
+}
+.make-dd__link:hover,
+.make-dd__link:focus {
+  background: #2a2a2a;
+}
+
+/* Fly-out panel: models of a given make */
+.make-dd__submenu {
+  position: absolute;
+  top: 0; /* anchor to the same vertical as the parent row */
+  left: 100%; /* directly to the right */
+  margin-left: -1px; /* pull in by a pixel so it doesn’t look offset */
+  min-width: 220px;
+  background: #1f1f1f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 0;
+  list-style: none;
+
+  opacity: 0;
+  transform: translateX(8px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.make-dd__item:hover > .make-dd__submenu,
+.make-dd__item:focus-within > .make-dd__submenu {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.make-dd__sublink {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: transparent;
+  color: #eaeaea;
+  border: 0;
+  cursor: pointer;
+}
+.make-dd__sublink:hover,
+.make-dd__sublink:focus {
+  background: #2a2a2a;
+}
+
+/* Ensure the header area doesn't clip the menus */
+.top-selection {
+  position: relative;
+  overflow: visible;
+}

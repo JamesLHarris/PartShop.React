@@ -3,12 +3,12 @@ import { Card } from "react-bootstrap";
 import "./CardStyles.css";
 import { useNavigate } from "react-router-dom";
 
-function PartCard(props) {
+function AdminCard(props) {
   const navigate = useNavigate();
 
   const partClickEvent = () => {
-    navigate(`part/${props.id}`);
-    console.log("Selected Customer Card:", props);
+    navigate(`/admin/part/${props.id}`);
+    console.log("Selected Admin Card:", props);
   };
 
   const imageUrl = `https://localhost:7274${props.photo}`;
@@ -32,6 +32,7 @@ function PartCard(props) {
                   <div>{rustedStatus}</div>
                 </div>
               </div>
+
               <div className="card-price">{formattedPrice}</div>
             </div>
           </Card.Text>
@@ -49,4 +50,4 @@ function PartCard(props) {
   );
 }
 
-export default PartCard;
+export default AdminCard;

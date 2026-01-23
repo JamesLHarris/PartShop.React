@@ -14,7 +14,9 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -59,4 +61,46 @@
   object-fit: cover;
   border-radius: 4px;
   background-color: #1c1c1c; /* fallback bg if image fails to load */
+}
+
+/* Header corner submit button container */
+.apd-header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+/* Primary button variant (if you don’t already have one) */
+.apd-btn--primary {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Form input styling to match the admin theme */
+.apd-input,
+.apd-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: inherit;
+}
+
+.apd-textarea {
+  resize: vertical;
+}
+
+.apd-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Make a dl row span full width when needed */
+.apd-form-wide {
+  grid-column: 1 / -1;
+}
+.apd-form-wide-dd {
+  padding-top: 6px;
 }

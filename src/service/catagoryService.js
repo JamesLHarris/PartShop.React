@@ -5,7 +5,7 @@ import {
   API_HOST_PREFIX,
 } from "./serviceHelpers";
 
-const modelEndpoint = `${API_HOST_PREFIX}/api/catagory`;
+const modelEndpoint = `${API_HOST_PREFIX}/api/catagories`;
 
 const deleteCatagory = (id) => {
   const config = {

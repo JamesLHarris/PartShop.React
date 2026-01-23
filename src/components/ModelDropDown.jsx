@@ -1,24 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "../dropDown.css";
 
-function ModelDropDown(props) {
-  const [models, setModelData] = useState({
-    modelData: [],
-  });
-
+function ModelDropDown({ data = [], onSelect }) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    let getData = props;
-    setModelData((prevState) => {
-      const pd = { ...prevState };
-      pd.modelData = getData.data;
-      return pd;
-    });
-  }, []);
-
-  const dropdownOptions = () => {
-    console.log("Helo World I Clicked Model");
+  const handleClick = (e, model) => {
+    e.preventDefault();
+    if (onSelect) {
+      onSelect(model);
+    }
   };
 
   return (
@@ -31,8 +21,12 @@ function ModelDropDown(props) {
         <button className="dropbtn">Model</button>
         {open && (
           <div className="dropdown-content">
-            {models.modelData.map((model, idx) => (
-              <a key={idx} href="#" onClick={dropdownOptions}>
+            {data.map((model, idx) => (
+              <a
+                key={model.id ?? idx}
+                href="#"
+                onClick={(e) => handleClick(e, model)}
+              >
                 {model.name}
               </a>
             ))}

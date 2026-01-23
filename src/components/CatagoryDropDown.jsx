@@ -1,24 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "../dropDown.css";
 
-function CatagoryDropDown(props) {
-  const [models, setCatagoryData] = useState({
-    modelData: [],
-  });
-
+function CatagoryDropDown({ data = [], onSelect }) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    let getData = props;
-    setCatagoryData((prevState) => {
-      const pd = { ...prevState };
-      pd.modelData = getData.data;
-      return pd;
-    });
-  }, []);
-
-  const dropdownOptions = () => {
-    console.log("Helo World I Clicked Catagory");
+  const handleClick = (e, cat) => {
+    e.preventDefault();
+    if (onSelect) {
+      onSelect(cat);
+    }
   };
 
   return (
@@ -28,12 +18,16 @@ function CatagoryDropDown(props) {
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        <button className="dropbtn">Catagory</button>
+        <button className="dropbtn">Category</button>
         {open && (
           <div className="dropdown-content">
-            {models.modelData.map((model, idx) => (
-              <a key={idx} href="#" onClick={dropdownOptions}>
-                {model.name}
+            {data.map((cat, idx) => (
+              <a
+                key={cat.id ?? idx}
+                href="#"
+                onClick={(e) => handleClick(e, cat)}
+              >
+                {cat.name}
               </a>
             ))}
           </div>
