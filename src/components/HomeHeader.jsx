@@ -15,6 +15,7 @@ import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
 
 function HomeHeader({ value, onChange }) {
+  const idOf = (x) => x?.id ?? x?.Id;
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [modelsData, setModelsData] = useState({
@@ -117,6 +118,20 @@ function HomeHeader({ value, onChange }) {
     navigate("/browse");
   };
 
+  const handleMakeSelected = (mk) => {
+    onChange?.({
+      makeId: idOf(mk),
+      modelId: null, // important: reset model when make changes
+    });
+  };
+
+  const handleModelSelected = (mk, m) => {
+    onChange?.({
+      makeId: idOf(mk),
+      modelId: idOf(m),
+    });
+  };
+
   const handleMakeSelect = (make) => {
     if (!onChange) return;
 
@@ -205,7 +220,9 @@ function HomeHeader({ value, onChange }) {
           <div className="top-selection">
             <MakeWithModelsFlyout
               makes={makeData.optionsUnmapped}
-              models={modelsData.optionsUnmapped}
+              modelsAll={modelsData.optionsUnmapped}
+              onSelectMake={handleMakeSelected}
+              onSelectModel={handleModelSelected}
             />
             {modelsData.optionsComponents}
 

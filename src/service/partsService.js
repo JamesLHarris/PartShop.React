@@ -6,6 +6,7 @@ import {
 } from "./serviceHelpers";
 
 const homeEndpoint = `${API_HOST_PREFIX}/api/home`;
+const partsEndpoint = `${API_HOST_PREFIX}/api/parts`;
 
 const deletePart = (id) => {
   const config = {
@@ -73,10 +74,21 @@ const getPartByIdCustomer = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+// const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
+//   const config = {
+//     method: "GET",
+//     url: `${homeEndpoint}/available?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+//     withCredentials: true,
+//     crossdomain: true,
+//     headers: { "Content-Type": "application/json" },
+//   };
+//   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+// };
+
 const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
   const config = {
     method: "GET",
-    url: `${homeEndpoint}/available?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+    url: `${partsEndpoint}/customer/paginate?pageIndex=${pageIndex}&pageSize=${pageSize}`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },

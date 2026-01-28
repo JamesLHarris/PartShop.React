@@ -25,7 +25,7 @@ function App() {
 
           {/* Everything inside this Layout gets the header */}
           <Route element={<Layout />}>
-            <Route path="/home" element={<Home />} />
+            <Route path="/home" element={<PartsBrowse />} />
             <Route path="/browse" element={<PartsBrowse />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
