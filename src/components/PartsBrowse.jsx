@@ -18,24 +18,36 @@ function PartsBrowse() {
       try {
         let response;
 
-        // Priority: Model -> Category -> Recently listed
-        if (filters?.modelId) {
+        const q = (filters?.q ?? "").trim();
+        const hasQuery = q.length > 0;
+
+        // Priority: Search -> Model -> Category -> Recently listed
+        if (hasQuery) {
+          response = await partsService.customerSearch({
+            pageIndex,
+            pageSize,
+            q,
+            makeId: filters?.makeId ?? null,
+            modelId: filters?.modelId ?? null,
+            categoryId: filters?.categoryId ?? null,
+          });
+        } else if (filters?.modelId) {
           response = await partsService.getByModelCustomer(
             pageIndex,
             pageSize,
-            filters.modelId
+            filters.modelId,
           );
         } else if (filters?.categoryId) {
           response = await partsService.getByCategoryCustomer(
             pageIndex,
             pageSize,
-            filters.categoryId
+            filters.categoryId,
           );
         } else {
           // Default: recently listed / all available
           response = await partsService.getAllAvailablePartsCustomer(
             pageIndex,
-            pageSize
+            pageSize,
           );
         }
 
@@ -54,7 +66,14 @@ function PartsBrowse() {
     };
 
     loadParts();
-  }, [filters, pageIndex, pageSize]);
+  }, [
+    filters?.q,
+    filters?.makeId,
+    filters?.modelId,
+    filters?.categoryId,
+    pageIndex,
+    pageSize,
+  ]);
 
   const cards = useMemo(
     () =>
@@ -63,7 +82,7 @@ function PartsBrowse() {
           key={part.id}
           id={part.id}
           name={part.name}
-          make={part.make?.company}
+          make={part.make?.company ?? part.makeName}
           condition={part.condition}
           tested={part.tested}
           rusted={part.rusted}
@@ -72,7 +91,7 @@ function PartsBrowse() {
           description={part.description}
         />
       )),
-    [vm.items]
+    [vm.items],
   );
 
   const totalPages = Math.max(1, Math.ceil(vm.totalCount / pageSize));
@@ -90,6 +109,7 @@ function PartsBrowse() {
                 key={i}
                 onClick={() => setPageIndex(i)}
                 className={pageIndex === i ? "active" : ""}
+                disabled={totalPages <= 1}
               >
                 {i + 1}
               </button>

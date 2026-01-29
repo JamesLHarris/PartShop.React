@@ -33,6 +33,21 @@ function HomeHeader({ value, onChange }) {
     optionsComponents: [],
   });
 
+  const [searchText, setSearchText] = useState(value?.q ?? "");
+
+  useEffect(() => {
+    console.log("Header received filters.q:", value?.q);
+    setSearchText(value?.q ?? "");
+  }, [value?.q]);
+
+  const submitSearch = (e) => {
+    e.preventDefault();
+    console.log("Submitting searchText:", searchText);
+
+    onChange?.({ q: searchText });
+    navigate("/browse");
+  };
+
   const [userId, setUserId] = useState(null);
 
   const navigate = useNavigate();
@@ -184,26 +199,6 @@ function HomeHeader({ value, onChange }) {
     toastr.error("Failed to load surveys on AnswersPage.", "Error");
   };
 
-  useEffect(() => {
-    modelService
-      .getAllModels()
-      .then((r) => {
-        console.log("models:", r.item?.length, r.item?.[0]);
-        onGetModelSuccess(r);
-      })
-      .catch(onGetError);
-  }, []);
-
-  useEffect(() => {
-    makeService
-      .getAllMakes()
-      .then((r) => {
-        console.log("makes:", r.item?.length, r.item?.[0]);
-        onGetMakeSuccess(r);
-      })
-      .catch(onGetError);
-  }, []);
-
   return (
     <div className="home-header">
       <header className="App-header">
@@ -233,6 +228,16 @@ function HomeHeader({ value, onChange }) {
             <a href="/contact">Contact Us</a>
             <a href="/about">About Us</a>
           </nav>
+
+          <form onSubmit={submitSearch} className="header-search">
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search parts (name, part #, description)"
+            />
+            <button type="submit">Search</button>
+          </form>
           <CartIcon onClick={() => setDrawerOpen(true)} />
         </div>
 

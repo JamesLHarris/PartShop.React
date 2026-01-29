@@ -140,6 +140,17 @@ const searchPart = (params = {}) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+const customerSearch = (params = {}) => {
+  const config = {
+    method: "GET",
+    url: `${homeEndpoint}/search/customer`,
+    params,
+    withCredentials: true,
+    crossdomain: true,
+  };
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
 const partsService = {
   deletePart,
   addPart,
@@ -149,6 +160,7 @@ const partsService = {
   getAllAvailablePartsCustomer,
   getAllParts,
   searchPart,
+  customerSearch,
   getPartByIdCustomer,
   getByCategoryCustomer,
   getByModelCustomer,
