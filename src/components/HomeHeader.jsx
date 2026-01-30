@@ -33,24 +33,33 @@ function HomeHeader({ value, onChange }) {
     optionsComponents: [],
   });
 
+  const navigate = useNavigate();
+
+  // Local-only input state (Option B: no API calls while typing)
   const [searchText, setSearchText] = useState(value?.q ?? "");
 
+  // Keep local searchText in sync when external actions clear q (filters reset)
   useEffect(() => {
-    console.log("Header received filters.q:", value?.q);
     setSearchText(value?.q ?? "");
   }, [value?.q]);
 
+  const handleSearchInputChange = (e) => {
+    setSearchText(e.target.value);
+  };
+
   const submitSearch = (e) => {
     e.preventDefault();
-    console.log("Submitting searchText:", searchText);
 
-    onChange?.({ q: searchText });
+    const q = (searchText ?? "").trim();
+
+    // Push committed query to Layout (this triggers PartsBrowse fetch)
+    onChange?.({ q });
+
+    // Ensure user lands on browse after searching
     navigate("/browse");
   };
 
   const [userId, setUserId] = useState(null);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     const id = localStorage.getItem("userId");
@@ -121,45 +130,59 @@ function HomeHeader({ value, onChange }) {
   const handleRecentlyListedClick = (e) => {
     e.preventDefault();
 
-    if (onChange) {
-      onChange({
-        makeId: null,
-        modelId: null,
-        categoryId: null,
-        q: "",
-      });
-    }
+    // clear committed query + clear local input
+    setSearchText("");
+
+    onChange?.({
+      makeId: null,
+      modelId: null,
+      categoryId: null,
+      q: "",
+    });
 
     navigate("/browse");
   };
 
   const handleMakeSelected = (mk) => {
+    setSearchText("");
     onChange?.({
       makeId: idOf(mk),
-      modelId: null, // important: reset model when make changes
+      modelId: null,
+      q: "",
     });
+    navigate("/browse");
   };
 
   const handleModelSelected = (mk, m) => {
+    setSearchText("");
     onChange?.({
       makeId: idOf(mk),
       modelId: idOf(m),
+      q: "",
     });
+    navigate("/browse");
   };
 
   const handleMakeSelect = (make) => {
     if (!onChange) return;
+
+    setSearchText("");
 
     const id = make.id ?? make.Id;
     onChange({
       makeId: id,
       modelId: null,
       categoryId: null,
+      q: "",
     });
+
+    navigate("/browse");
   };
 
   const handleModelSelect = (model) => {
     if (!onChange) return;
+
+    setSearchText("");
 
     const modelId = model.id ?? model.Id;
     const makeId = model.makeId ?? model.MakeId ?? value?.makeId ?? null;
@@ -168,11 +191,16 @@ function HomeHeader({ value, onChange }) {
       makeId,
       modelId,
       categoryId: null,
+      q: "",
     });
+
+    navigate("/browse");
   };
 
   const handleCategorySelect = (category) => {
     if (!onChange) return;
+
+    setSearchText("");
 
     const categoryId = category.id ?? category.Id;
 
@@ -180,7 +208,10 @@ function HomeHeader({ value, onChange }) {
       categoryId,
       makeId: null,
       modelId: null,
+      q: "",
     });
+
+    navigate("/browse");
   };
 
   const handleLogout = () => {
@@ -191,7 +222,6 @@ function HomeHeader({ value, onChange }) {
   };
 
   const handleCheckout = () => {
-    // Stub for now; later we’ll call POST /api/checkout then redirect to Shopify URL.
     window.location.href = "/checkout";
   };
 
@@ -220,7 +250,6 @@ function HomeHeader({ value, onChange }) {
               onSelectModel={handleModelSelected}
             />
             {modelsData.optionsComponents}
-
             {catagoryData.optionsComponents}
           </div>
 
@@ -229,15 +258,18 @@ function HomeHeader({ value, onChange }) {
             <a href="/about">About Us</a>
           </nav>
 
+          {/* Option B: no API calls while typing */}
           <form onSubmit={submitSearch} className="header-search">
             <input
               type="text"
+              name="q"
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search parts (name, part #, description)"
+              onChange={handleSearchInputChange}
+              placeholder="Search parts..."
             />
             <button type="submit">Search</button>
           </form>
+
           <CartIcon onClick={() => setDrawerOpen(true)} />
         </div>
 

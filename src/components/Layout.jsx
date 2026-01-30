@@ -18,14 +18,19 @@ function Layout() {
     setFilters((prev) => ({ ...prev, ...patch }));
   };
 
+  // Reset to first page whenever the query-driving filters change
   useEffect(() => {
     setPageIndex(0);
   }, [filters.makeId, filters.modelId, filters.categoryId, filters.q]);
 
+  // Reset to first page whenever page size changes (prevents landing on invalid pages)
+  useEffect(() => {
+    setPageIndex(0);
+  }, [pageSize]);
+
   const outletContext = useMemo(
     () => ({
       filters,
-      setFilters,
       handleHeaderChange,
       pageIndex,
       setPageIndex,
@@ -33,7 +38,7 @@ function Layout() {
       setPageSize,
       pageSizes,
     }),
-    [filters, pageIndex, pageSize]
+    [filters, pageIndex, pageSize, pageSizes],
   );
 
   return (
