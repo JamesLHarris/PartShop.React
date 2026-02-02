@@ -30,17 +30,6 @@ const addPart = (payload) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-const updatePart = (payload, id) => {
-  const config = {
-    method: "PUT",
-    url: `${homeEndpoint}/${id}`,
-    data: payload,
-    withCredentials: true,
-    crossdomain: true,
-  };
-  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
-};
-
 const patchPart = (payload, id) => {
   const config = {
     method: "PATCH",
@@ -154,7 +143,6 @@ const customerSearch = (params = {}) => {
 const partsService = {
   deletePart,
   addPart,
-  updatePart,
   patchPart,
   getPartById,
   getAllAvailablePartsCustomer,

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import toastr from "toastr";
 import partsService from "../service/partsService";
 import availableService from "../service/availableService";
 import "./AdminPartDetails.css";
@@ -18,6 +19,9 @@ function AdminPartDetails() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Ref lock prevents ultra-fast multi-click PATCH spam before state re-render
+  const saveLockRef = useRef(false);
+
   const [edit, setEdit] = useState({
     price: false,
     availability: false,
@@ -25,8 +29,6 @@ function AdminPartDetails() {
   });
 
   const [availabilityOptions, setAvailabilityOptions] = useState([]); // [{value,label}]
-
-  // location modal stub
   const [locModalOpen, setLocModalOpen] = useState(false);
 
   // --- fetchers ---
@@ -34,9 +36,16 @@ function AdminPartDetails() {
     setPart(response.item);
     setLoading(false);
   };
+
   const onError = (err) => {
     console.error("AdminPartDetails error:", err);
     setLoading(false);
+
+    const msg =
+      err?.response?.data?.errors?.[0] ||
+      err?.response?.data?.error ||
+      "Failed to load part.";
+    toastr.error(msg);
   };
 
   const refresh = () =>
@@ -45,6 +54,7 @@ function AdminPartDetails() {
   useEffect(() => {
     setLoading(true);
     partsService.getPartById(id).then(onGetSuccess).catch(onError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -52,7 +62,6 @@ function AdminPartDetails() {
     availableService
       .getAllAvailabilities()
       .then((res) => {
-        // normalize to [{value,label}]
         const raw = res.item?.pagedItems || res.items || res.item || [];
         const opts = raw.map((a) => ({
           value: String(a.id),
@@ -61,6 +70,7 @@ function AdminPartDetails() {
         setAvailabilityOptions(opts);
       })
       .catch(onError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- utils ---
@@ -78,18 +88,12 @@ function AdminPartDetails() {
     return `https://localhost:7274${img.startsWith("/") ? img : `/${img}`}`;
   };
 
-  const patchAndRefresh = async (payload) => {
-    try {
-      setSaving(true);
-      await partsService.patchPart(payload, vm.id); // your service: (payload, id)
-      await refresh();
-    } catch (e) {
-      console.error("PATCH failed", e);
-      alert("Update failed. Check console for details.");
-    } finally {
-      setSaving(false);
-      setEdit({ price: false, availability: false, desc: false });
-    }
+  const showApiError = (err, fallback = "Update failed.") => {
+    const msg =
+      err?.response?.data?.errors?.[0] ||
+      err?.response?.data?.error ||
+      fallback;
+    toastr.error(msg);
   };
 
   // --- normalize shape for safe rendering ---
@@ -148,22 +152,63 @@ function AdminPartDetails() {
       description: p.description,
       locationId: p.locationId ?? get(p, "location", "id"),
       location: p.location,
+      rawImage: p.image || "",
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [part]);
 
+  // Harden modal initial values (prevents crashes on missing nested objects)
+  const initialLocation = {
+    siteId: get(vm, "location", "site", "id") ?? null,
+    areaId: get(vm, "location", "area", "id") ?? null,
+    aisleId: get(vm, "location", "aisle", "id") ?? null,
+    shelfId: get(vm, "location", "shelf", "id") ?? null,
+    sectionId: get(vm, "location", "section", "id") ?? null,
+    boxId: get(vm, "location", "box", "id") ?? null,
+  };
+
+  // --- PATCH with lock (prevents rapid click spam across toggles, etc.) ---
+  const patchAndRefresh = async (payload) => {
+    // Ultra-fast double-click protection
+    if (saveLockRef.current) return;
+
+    // Basic guard
+    if (!payload || typeof payload !== "object") return;
+
+    saveLockRef.current = true;
+    setSaving(true);
+
+    try {
+      await partsService.patchPart(payload, vm.id); // your service: (payload, id)
+      toastr.success("Saved.");
+      await refresh();
+    } catch (e) {
+      console.error("PATCH failed", e);
+      showApiError(e, "Update failed.");
+    } finally {
+      setSaving(false);
+      saveLockRef.current = false;
+      setEdit({ price: false, availability: false, desc: false });
+    }
+  };
+
   // --- handlers (inline editors + toggles) ---
-  const onEditPrice = () => setEdit((e) => ({ ...e, price: true }));
-  const onChangeAvailability = () =>
-    setEdit((e) => ({ ...e, availability: true }));
-  const onEditDesc = () => setEdit((e) => ({ ...e, desc: true }));
+  const onToggleRusted = () => {
+    if (saving) return;
+    patchAndRefresh({ rusted: !vm.rusted });
+  };
 
-  const onToggleRusted = () => patchAndRefresh({ rusted: !vm.rusted });
-  const onToggleTested = () => patchAndRefresh({ tested: !vm.tested });
+  const onToggleTested = () => {
+    if (saving) return;
+    patchAndRefresh({ tested: !vm.tested });
+  };
 
-  // location modal open/save (wire when modal exists)
-  const openLocationModal = () => setLocModalOpen(true);
+  const openLocationModal = () => {
+    if (saving) return;
+    setLocModalOpen(true);
+  };
 
-  const handleLocationSave = async (locationId /*, prettyPath */) => {
+  const handleLocationSave = async (locationId) => {
     await patchAndRefresh({ locationId });
     setLocModalOpen(false);
   };
@@ -182,10 +227,10 @@ function AdminPartDetails() {
                 vm.availableStatus === "Available"
                   ? "apd-badge--available"
                   : vm.availableStatus === "Unavailable"
-                  ? "apd-badge--unavailable"
-                  : vm.availableStatus === "Pending"
-                  ? "apd-badge--pending"
-                  : ""
+                    ? "apd-badge--unavailable"
+                    : vm.availableStatus === "Pending"
+                      ? "apd-badge--pending"
+                      : ""
               }`}
             >
               {vm.availableStatus}
@@ -197,6 +242,7 @@ function AdminPartDetails() {
           {vm.dateModified
             ? ` • Updated ${new Date(vm.dateModified).toLocaleDateString()}`
             : null}
+          {saving ? " • Saving…" : null}
         </div>
       </header>
 
@@ -214,10 +260,9 @@ function AdminPartDetails() {
                 type="button"
                 className="apd-btn apd-btn--outlined"
                 onClick={() => {
-                  const path = window.prompt(
-                    "Image path or URL:",
-                    part?.image || ""
-                  );
+                  if (saving) return;
+                  const current = vm.rawImage || "";
+                  const path = window.prompt("Image path or URL:", current);
                   if (path && path.trim())
                     patchAndRefresh({ image: path.trim() });
                 }}
@@ -225,7 +270,15 @@ function AdminPartDetails() {
               >
                 Replace Photo
               </button>
-              <a className="apd-btn" href={vm.image} download>
+
+              <a
+                className={`apd-btn ${!vm.image ? "apd-btn--disabled" : ""}`}
+                href={vm.image || "#"}
+                download
+                onClick={(e) => {
+                  if (!vm.image) e.preventDefault();
+                }}
+              >
                 Download
               </a>
             </div>
@@ -311,7 +364,7 @@ function AdminPartDetails() {
             </div>
           </article>
 
-          {/* Meta: price, availability, condition, dates, description */}
+          {/* Meta */}
           <article className="apd-card apd-meta">
             <h3>Meta</h3>
             <dl className="apd-dl">
@@ -322,6 +375,7 @@ function AdminPartDetails() {
                   {edit.price ? (
                     <InLineNumber
                       value={vm.price}
+                      disabled={saving}
                       onSubmit={(n) => patchAndRefresh({ price: n })}
                       onCancel={() => setEdit((e) => ({ ...e, price: false }))}
                     />
@@ -348,6 +402,7 @@ function AdminPartDetails() {
                     <InLineSelect
                       value={String(vm.availableId ?? "")}
                       options={availabilityOptions}
+                      disabled={saving}
                       onSubmit={(val) =>
                         patchAndRefresh({ availableId: Number(val) })
                       }
@@ -376,7 +431,11 @@ function AdminPartDetails() {
               <div>
                 <dt>Rusted</dt>
                 <dd>
-                  <TogglePill on={!!vm.rusted} onClick={onToggleRusted}>
+                  <TogglePill
+                    on={!!vm.rusted}
+                    onClick={onToggleRusted}
+                    disabled={saving}
+                  >
                     {vm.rusted ? "Yes" : "No"}
                   </TogglePill>
                 </dd>
@@ -384,7 +443,11 @@ function AdminPartDetails() {
               <div>
                 <dt>Tested</dt>
                 <dd>
-                  <TogglePill on={!!vm.tested} onClick={onToggleTested}>
+                  <TogglePill
+                    on={!!vm.tested}
+                    onClick={onToggleTested}
+                    disabled={saving}
+                  >
                     {vm.tested ? "Yes" : "No"}
                   </TogglePill>
                 </dd>
@@ -411,6 +474,7 @@ function AdminPartDetails() {
               {edit.desc ? (
                 <InLineText
                   value={vm.description || ""}
+                  disabled={saving}
                   onSubmit={(text) => patchAndRefresh({ description: text })}
                   onCancel={() => setEdit((e) => ({ ...e, desc: false }))}
                 />
@@ -423,7 +487,7 @@ function AdminPartDetails() {
                     type="button"
                     className="apd-btn apd-btn--outlined apd-btn--sm"
                     disabled={saving}
-                    onClick={onEditDesc}
+                    onClick={() => setEdit((e) => ({ ...e, desc: true }))}
                   >
                     Change Description
                   </button>
@@ -432,28 +496,19 @@ function AdminPartDetails() {
             </div>
           </article>
         </div>
-        {/* AUDIT HISTORY – right column */}
+
+        {/* AUDIT HISTORY */}
         <aside className="apd-card apd-audit-column">
           <h3>Audit History</h3>
           <AuditHistory partId={vm.id} pageSize={10} />
         </aside>
       </section>
 
-      {/* When you add the modal component, render it here */}
-
       <LocationModal
         open={locModalOpen}
         onClose={() => setLocModalOpen(false)}
         onSave={handleLocationSave}
-        initial={{
-          // pass ids if you have them in vm.location
-          siteId: vm.location.site.id,
-          areaId: vm.location.area.id,
-          aisleId: vm.location.aisle.id,
-          shelfId: vm.location.shelf.id,
-          sectionId: vm.location.section.id,
-          boxId: vm.location.box.id,
-        }}
+        initial={initialLocation}
       />
     </div>
   );
