@@ -1,9 +1,7 @@
 // App.jsx
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React from "react";
 import Layout from "./components/Layout";
-import Home from "./components/Home";
 import PartsBrowse from "./components/PartsBrowse";
 import About from "./components/About";
 import Contact from "./components/Contact";
@@ -21,7 +19,7 @@ function App() {
     <CartProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/" element={<Navigate to="/broswe" replace />} />
 
           {/* Everything inside this Layout gets the header */}
           <Route element={<Layout />}>
