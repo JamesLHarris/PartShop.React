@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import auditService from "../service/auditService";
 
-const AuditHistory = ({ partId, pageSize = 10 }) => {
+const AuditHistory = ({ partId, pageSize = 10, refreshToken = 0 }) => {
   const [pageIndex, setPageIndex] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [pagedItems, setPagedItems] = useState([]);
@@ -33,7 +33,7 @@ const AuditHistory = ({ partId, pageSize = 10 }) => {
       })
       .catch((err) => setError(err))
       .finally(() => setIsLoading(false));
-  }, [isPartMode, partId, pageIndex, pageSize]);
+  }, [isPartMode, partId, pageIndex, pageSize, refreshToken]);
 
   useEffect(() => {
     loadData();

@@ -157,3 +157,30 @@
   opacity: 0.8;
   margin: 6px 0 12px;
 }
+
+.cart-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 10px;
+}
+
+.cart-qty__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #232323;
+  color: #eaeaea;
+  cursor: pointer;
+}
+
+.cart-qty__input {
+  width: 50px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #161616;
+  color: #eaeaea;
+  text-align: center;
+}

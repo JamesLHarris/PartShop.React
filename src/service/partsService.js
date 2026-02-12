@@ -63,16 +63,41 @@ const getPartByIdCustomer = (id) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
-// const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
-//   const config = {
-//     method: "GET",
-//     url: `${homeEndpoint}/available?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-//     withCredentials: true,
-//     crossdomain: true,
-//     headers: { "Content-Type": "application/json" },
-//   };
-//   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
-// };
+const getPartImagesByPartId = (id) => {
+  const config = {
+    method: "GET",
+    url: `${homeEndpoint}/${id}/images`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+// Upload 1+ gallery images for a part.
+// FormData keys must match the API request model:
+// - Images: one or more File entries
+// - SetFirstAsPrimary: "true"/"false" (optional)
+// - SortStart: integer (optional)
+const addPartImages = (
+  id,
+  files = [],
+  { setFirstAsPrimary = false, sortStart = 0 } = {},
+) => {
+  const fd = new FormData();
+  (files || []).forEach((f) => fd.append("Images", f));
+  fd.append("SetFirstAsPrimary", String(!!setFirstAsPrimary));
+  fd.append("SortStart", String(sortStart));
+
+  const config = {
+    method: "POST",
+    url: `${homeEndpoint}/${id}/images`,
+    data: fd,
+    withCredentials: true,
+    crossdomain: true,
+  };
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
 
 const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
   const config = {
@@ -150,6 +175,8 @@ const partsService = {
   searchPart,
   customerSearch,
   getPartByIdCustomer,
+  getPartImagesByPartId,
+  addPartImages,
   getByCategoryCustomer,
   getByModelCustomer,
 };

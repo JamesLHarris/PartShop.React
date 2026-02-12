@@ -18,12 +18,19 @@ function AdminPartDetails() {
   const [part, setPart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [auditRefreshToken, setAuditRefreshToken] = useState(0);
+
+  // images
+  const [images, setImages] = useState([]);
+  const [activeImage, setActiveImage] = useState("");
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // Ref lock prevents ultra-fast multi-click PATCH spam before state re-render
   const saveLockRef = useRef(false);
 
   const [edit, setEdit] = useState({
     price: false,
+    quantity: false,
     availability: false,
     desc: false,
   });
@@ -51,9 +58,24 @@ function AdminPartDetails() {
   const refresh = () =>
     partsService.getPartById(id).then(onGetSuccess).catch(onError);
 
+  const refreshImages = () =>
+    partsService
+      .getPartImagesByPartId(id)
+      .then((res) => {
+        const list = res?.item || [];
+        setImages(list);
+        const primary = list.find((x) => x.isPrimary) || list[0];
+        setActiveImage(primary?.url ? buildImageUrl(primary.url) : "");
+      })
+      .catch(() => {
+        setImages([]);
+        setActiveImage("");
+      });
+
   useEffect(() => {
     setLoading(true);
     partsService.getPartById(id).then(onGetSuccess).catch(onError);
+    refreshImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -82,11 +104,11 @@ function AdminPartDetails() {
   const get = (obj, ...keys) =>
     keys.reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
 
-  const buildImageUrl = (img) => {
+  function buildImageUrl(img) {
     if (!img) return "";
     if (/^https?:\/\//i.test(img)) return img;
     return `https://localhost:7274${img.startsWith("/") ? img : `/${img}`}`;
-  };
+  }
 
   const showApiError = (err, fallback = "Update failed.") => {
     const msg =
@@ -182,13 +204,19 @@ function AdminPartDetails() {
       await partsService.patchPart(payload, vm.id); // your service: (payload, id)
       toastr.success("Saved.");
       await refresh();
+      setAuditRefreshToken((t) => t + 1);
     } catch (e) {
       console.error("PATCH failed", e);
       showApiError(e, "Update failed.");
     } finally {
       setSaving(false);
       saveLockRef.current = false;
-      setEdit({ price: false, availability: false, desc: false });
+      setEdit({
+        price: false,
+        quantity: false,
+        availability: false,
+        desc: false,
+      });
     }
   };
 
@@ -215,6 +243,8 @@ function AdminPartDetails() {
 
   if (loading) return <div className="apd-skeleton" aria-busy="true" />;
   if (!part) return <p>Not found.</p>;
+
+  const galleryMain = activeImage || vm.image;
 
   return (
     <div className="admin-part-details">
@@ -250,11 +280,35 @@ function AdminPartDetails() {
         <div className="apd-grid">
           {/* Image / Actions */}
           <aside className="apd-card apd-media">
-            {vm.image ? (
-              <img src={vm.image} alt={vm.name} className="apd-photo" />
+            {galleryMain ? (
+              <img src={galleryMain} alt={vm.name} className="apd-photo" />
             ) : (
               <div className="apd-photo apd-photo--empty">No Image</div>
             )}
+
+            {images.length > 1 && (
+              <div className="apd-gallery">
+                <div className="apd-gallery__label">Photos</div>
+                <div className="apd-thumbs">
+                  {images.map((img) => {
+                    const src = buildImageUrl(img.url);
+                    const key = img.id || img.url;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className="apd-thumb"
+                        title={img.isPrimary ? "Primary" : ""}
+                        onClick={() => setActiveImage(src)}
+                      >
+                        <img src={src} alt={vm.name} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="apd-actions">
               <button
                 type="button"
@@ -271,12 +325,42 @@ function AdminPartDetails() {
                 Replace Photo
               </button>
 
+              <label className="apd-btn apd-btn--outlined apd-btn--file">
+                Upload Gallery
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  hidden
+                  disabled={saving || uploadingImages}
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    try {
+                      setUploadingImages(true);
+                      await partsService.addPartImages(vm.id, files, {
+                        setFirstAsPrimary: false,
+                        sortStart: images.length,
+                      });
+                      toastr.success("Images uploaded.");
+                      await refreshImages();
+                    } catch (err) {
+                      console.error(err);
+                      showApiError(err, "Failed to upload images.");
+                    } finally {
+                      setUploadingImages(false);
+                      e.target.value = ""; // reset so same files can be re-selected
+                    }
+                  }}
+                />
+              </label>
+
               <a
-                className={`apd-btn ${!vm.image ? "apd-btn--disabled" : ""}`}
-                href={vm.image || "#"}
+                className={`apd-btn ${!galleryMain ? "apd-btn--disabled" : ""}`}
+                href={galleryMain || "#"}
                 download
                 onClick={(e) => {
-                  if (!vm.image) e.preventDefault();
+                  if (!galleryMain) e.preventDefault();
                 }}
               >
                 Download
@@ -394,6 +478,41 @@ function AdminPartDetails() {
                 </dd>
               </div>
 
+              {/* Quantity */}
+              <div>
+                <dt>Quantity</dt>
+                <dd>
+                  {edit.quantity ? (
+                    <InLineNumber
+                      value={vm.quantity ?? 0}
+                      step={1}
+                      disabled={saving}
+                      onSubmit={(n) =>
+                        patchAndRefresh({
+                          quantity: Math.max(0, Math.trunc(n)),
+                        })
+                      }
+                      onCancel={() =>
+                        setEdit((e) => ({ ...e, quantity: false }))
+                      }
+                    />
+                  ) : (
+                    <>
+                      {Number.isFinite(vm.quantity) ? vm.quantity : "—"}
+                      <button
+                        className="apd-btn apd-btn--outlined apd-btn--xs"
+                        disabled={saving}
+                        onClick={() =>
+                          setEdit((e) => ({ ...e, quantity: true }))
+                        }
+                      >
+                        Edit
+                      </button>
+                    </>
+                  )}
+                </dd>
+              </div>
+
               {/* Availability */}
               <div>
                 <dt>Availability</dt>
@@ -500,7 +619,11 @@ function AdminPartDetails() {
         {/* AUDIT HISTORY */}
         <aside className="apd-card apd-audit-column">
           <h3>Audit History</h3>
-          <AuditHistory partId={vm.id} pageSize={10} />
+          <AuditHistory
+            partId={vm.id}
+            pageSize={10}
+            refreshToken={auditRefreshToken}
+          />
         </aside>
       </section>
 

@@ -8,12 +8,14 @@ const buildImageUrl = (img) =>
   !img
     ? ""
     : /^https?:\/\//i.test(img)
-    ? img
-    : `https://localhost:7274${img.startsWith("/") ? img : `/${img}`}`;
+      ? img
+      : `https://localhost:7274${img.startsWith("/") ? img : `/${img}`}`;
 
 function CustomerPartDetails() {
   const { id } = useParams();
   const [part, setPart] = useState(null);
+  const [images, setImages] = useState([]); // PartImages rows
+  const [activeImage, setActiveImage] = useState("");
   const [loading, setLoading] = useState(true);
   const { add } = useCart();
   const navigate = useNavigate();
@@ -21,25 +23,41 @@ function CustomerPartDetails() {
   useEffect(() => {
     setLoading(true);
     setPart(null);
+    setImages([]);
+    setActiveImage("");
     partsService
       .getPartByIdCustomer(id)
       .then((res) => setPart(res.item ?? res.items ?? res))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
+
+    // Load gallery images (non-blocking; page still renders with the legacy image)
+    partsService
+      .getPartImagesByPartId(id)
+      .then((res) => {
+        const list = res?.item || [];
+        setImages(list);
+        const primary = list.find((x) => x.isPrimary) || list[0];
+        if (primary?.url) setActiveImage(buildImageUrl(primary.url));
+      })
+      .catch(() => {
+        // ignore; still show legacy image
+      });
   }, [id]);
 
   if (loading || !part)
     return <div className="apd-skeleton" aria-busy="true" />;
 
   const handleAdd = () => {
+    const cartImage = galleryMain || `https://localhost:7274${part.image}`;
     add(
       {
         id: part.id,
         name: part.name,
-        image: `https://localhost:7274${part.image}`,
+        image: cartImage,
         unitPrice: Number(part.price),
       },
-      1
+      1,
     );
   };
 
@@ -58,14 +76,17 @@ function CustomerPartDetails() {
             style: "currency",
             currency: "USD",
           })
-        : part.price ?? "—",
+        : (part.price ?? "—"),
     rusted: !!part.rusted,
     tested: !!part.tested,
     description: part.description,
     image: buildImageUrl(part.image),
+    quantity: part.quantity,
     dateCreated: part.datecreated ?? part.dateCreated,
     dateModified: part.datemodified ?? part.dateModified,
   };
+
+  const galleryMain = activeImage || vm.image;
 
   return (
     <div className="admin-part-details">
@@ -78,10 +99,10 @@ function CustomerPartDetails() {
                 vm.availableStatus === "Available"
                   ? "apd-badge--available"
                   : vm.availableStatus === "Unavailable"
-                  ? "apd-badge--unavailable"
-                  : vm.availableStatus === "Pending"
-                  ? "apd-badge--pending"
-                  : ""
+                    ? "apd-badge--unavailable"
+                    : vm.availableStatus === "Pending"
+                      ? "apd-badge--pending"
+                      : ""
               }`}
             >
               {vm.availableStatus}
@@ -93,18 +114,49 @@ function CustomerPartDetails() {
 
       <section className="apd-grid">
         <aside className="apd-card apd-media">
-          {vm.image ? (
-            <img src={vm.image} alt={vm.name} className="apd-photo" />
+          {galleryMain ? (
+            <img src={galleryMain} alt={vm.name} className="apd-photo" />
           ) : (
             <div className="apd-photo apd-photo--empty">No Image</div>
           )}
-          {vm.image && <div className="apd-actions"></div>}
+
+          {images.length > 1 && (
+            <div className="apd-gallery">
+              <div className="apd-gallery__label">Photos</div>
+              <div className="apd-thumbs">
+                {images.map((img) => {
+                  const src = buildImageUrl(img.url);
+                  const key = img.id || img.url;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className="apd-thumb"
+                      title={img.isPrimary ? "Primary" : ""}
+                      onClick={() => setActiveImage(src)}
+                    >
+                      <img src={src} alt={vm.name} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="apd-dl">
             <div>
               <dt>Price</dt>
               <dd>{vm.price}</dd>
             </div>
-            <button className="apd-btn" onClick={handleAdd}>
+            <div>
+              <dt>In Stock</dt>
+              <dd>{Number.isFinite(vm.quantity) ? vm.quantity : "—"}</dd>
+            </div>
+            <button
+              className="apd-btn"
+              onClick={handleAdd}
+              disabled={Number.isFinite(vm.quantity) && vm.quantity <= 0}
+            >
               Add to Cart
             </button>
           </div>

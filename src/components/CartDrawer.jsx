@@ -29,6 +29,28 @@ function CartDrawer({ open, onClose, onCheckout }) {
                   ${Number(it.unitPrice || 0).toFixed(2)}
                 </div>
                 <div className="cart-line__qty">
+                  <div className="cart-qty">
+                    <button
+                      type="button"
+                      className="cart-qty__btn"
+                      onClick={() => updateQty(it.id, (it.qty || 1) - 1)}
+                    >
+                      −
+                    </button>
+                    <input
+                      className="cart-qty__input"
+                      inputMode="numeric"
+                      value={it.qty ?? 1}
+                      onChange={(e) => updateQty(it.id, e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="cart-qty__btn"
+                      onClick={() => updateQty(it.id, (it.qty || 1) + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
                   <button className="link" onClick={() => remove(it.id)}>
                     Remove
                   </button>

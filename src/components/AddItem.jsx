@@ -18,6 +18,7 @@ const initialForm = {
   partNumber: "",
   description: "",
   price: "",
+  quantity: "1",
   makeId: "",
   modelId: "",
   catagoryId: "",
@@ -37,6 +38,10 @@ function AddItem() {
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(addItem);
 
+  // Additional gallery images (multi-upload)
+  const [galleryFiles, setGalleryFiles] = useState([]); // File[]
+  const [galleryPreviews, setGalleryPreviews] = useState([]); // string[]
+
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -52,8 +57,12 @@ function AddItem() {
       if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
+
+      galleryPreviews
+        .filter((u) => u && u.startsWith("blob:"))
+        .forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [previewUrl]);
+  }, [previewUrl, galleryPreviews]);
 
   const requiredMissing = useMemo(() => {
     const required = [
@@ -114,6 +123,26 @@ function AddItem() {
     setPreviewUrl(URL.createObjectURL(f));
   };
 
+  const handleGalleryChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const okTypes = ["image/jpeg", "image/png", "image/webp"];
+    const invalid = files.find((f) => !okTypes.includes(f.type));
+    if (invalid) {
+      toastr.error("All images must be JPG, PNG, or WEBP.");
+      return;
+    }
+
+    // revoke old previews
+    galleryPreviews
+      .filter((u) => u && u.startsWith("blob:"))
+      .forEach((u) => URL.revokeObjectURL(u));
+
+    setGalleryFiles(files);
+    setGalleryPreviews(files.map((f) => URL.createObjectURL(f)));
+  };
+
   const buildPayload = () => {
     const payload = new FormData();
 
@@ -142,7 +171,17 @@ function AddItem() {
     try {
       setSubmitting(true);
       const payload = buildPayload();
-      await partsService.addPart(payload);
+      const res = await partsService.addPart(payload);
+      const newId = res?.item ?? res;
+
+      // Optional: upload additional gallery images after part is created.
+      // Primary thumbnail remains the single "image" used in the Add endpoint.
+      if (newId && galleryFiles.length > 0) {
+        await partsService.addPartImages(newId, galleryFiles, {
+          setFirstAsPrimary: false,
+          sortStart: 0,
+        });
+      }
       toastr.success("Part added successfully!");
       navigate("/admin");
     } catch (err) {
@@ -197,6 +236,17 @@ function AddItem() {
                 />
               </label>
 
+              <label className="apd-btn apd-btn--outlined apd-btn--file">
+                Add Gallery Photos
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleGalleryChange}
+                  accept="image/*"
+                  hidden
+                />
+              </label>
+
               {imageFile ? (
                 <button
                   type="button"
@@ -218,6 +268,43 @@ function AddItem() {
                 </button>
               )}
             </div>
+
+            {galleryPreviews.length > 0 && (
+              <div className="apd-gallery">
+                <div className="apd-gallery__label">Gallery Preview</div>
+                <div className="apd-thumbs">
+                  {galleryPreviews.map((src, idx) => (
+                    <button
+                      type="button"
+                      key={src}
+                      className="apd-thumb"
+                      title={`Gallery image ${idx + 1}`}
+                      onClick={() => {
+                        // allow quick swap: click a thumbnail to make it the main preview (UI-only)
+                        setPreviewUrl(src);
+                      }}
+                    >
+                      <img src={src} alt={`Gallery ${idx + 1}`} />
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="apd-btn apd-btn--outlined apd-btn--sm"
+                  disabled={submitting}
+                  onClick={() => {
+                    galleryPreviews
+                      .filter((u) => u && u.startsWith("blob:"))
+                      .forEach((u) => URL.revokeObjectURL(u));
+                    setGalleryFiles([]);
+                    setGalleryPreviews([]);
+                  }}
+                >
+                  Clear Gallery
+                </button>
+              </div>
+            )}
           </aside>
 
           {/* Specs card */}
@@ -271,6 +358,19 @@ function AddItem() {
                     onChange={handleChange}
                     className="apd-input"
                     inputMode="decimal"
+                  />
+                </dd>
+              </div>
+
+              <div>
+                <dt>Quantity</dt>
+                <dd>
+                  <input
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    className="apd-input"
+                    inputMode="numeric"
                   />
                 </dd>
               </div>
