@@ -7,6 +7,7 @@ import {
 
 const homeEndpoint = `${API_HOST_PREFIX}/api/home`;
 const partsEndpoint = `${API_HOST_PREFIX}/api/parts`;
+const partImageUrl = API_HOST_PREFIX;
 
 const deletePart = (id) => {
   const config = {
@@ -179,6 +180,7 @@ const partsService = {
   addPartImages,
   getByCategoryCustomer,
   getByModelCustomer,
+  partImageUrl,
 };
 
 export default partsService;
