@@ -20,7 +20,7 @@ function App() {
     <CartProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/broswe" replace />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
 
           {/* Everything inside this Layout gets the header */}
           <Route element={<Layout />}>
