@@ -2,6 +2,7 @@ import React from "react";
 import { Card } from "react-bootstrap";
 import "./CardStyles.css";
 import { useNavigate } from "react-router-dom";
+import partsService from "../service/partsService";
 
 function PartCard(props) {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ function PartCard(props) {
     console.log("Selected Customer Card:", props);
   };
 
-  const imageUrl = `https://localhost:7274${props.photo}`;
+  const imageUrl = `${partsService.partImageUrl}${props.photo}`;
   const formattedPrice = `$${parseFloat(props.price).toFixed(2)}`;
   const rustedStatus = props.rusted ? "Rusted" : "Unrusted";
   const testedStatus = props.tested ? "Tested" : "Untested";
