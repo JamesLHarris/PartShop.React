@@ -9,7 +9,7 @@ const buildImageUrl = (img) =>
     ? ""
     : /^https?:\/\//i.test(img)
       ? img
-      : `https://localhost:7274${img.startsWith("/") ? img : `/${img}`}`;
+      : `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
 
 function CustomerPartDetails() {
   const { id } = useParams();
@@ -49,7 +49,8 @@ function CustomerPartDetails() {
     return <div className="apd-skeleton" aria-busy="true" />;
 
   const handleAdd = () => {
-    const cartImage = galleryMain || `https://localhost:7274${part.image}`;
+    const cartImage =
+      galleryMain || `${partsService.partImageUrl}${part.image}`;
     add(
       {
         id: part.id,

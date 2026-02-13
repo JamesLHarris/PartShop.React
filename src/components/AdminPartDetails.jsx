@@ -107,7 +107,7 @@ function AdminPartDetails() {
   function buildImageUrl(img) {
     if (!img) return "";
     if (/^https?:\/\//i.test(img)) return img;
-    return `https://localhost:7274${img.startsWith("/") ? img : `/${img}`}`;
+    return `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
   }
 
   const showApiError = (err, fallback = "Update failed.") => {
