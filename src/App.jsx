@@ -2,6 +2,7 @@
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
+import Home from "./components/Home";
 import PartsBrowse from "./components/PartsBrowse";
 import About from "./components/About";
 import Contact from "./components/Contact";
@@ -23,7 +24,7 @@ function App() {
 
           {/* Everything inside this Layout gets the header */}
           <Route element={<Layout />}>
-            <Route path="/home" element={<PartsBrowse />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/browse" element={<PartsBrowse />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
