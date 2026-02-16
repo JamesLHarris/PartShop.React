@@ -169,7 +169,13 @@ function AddItem() {
       navigate("/admin");
     } catch (err) {
       console.error("Submission failed", err);
-      toastr.error("Failed to add part.");
+
+      const apiErrors =
+        err?.response?.data?.errors ||
+        err?.response?.data?.Errors ||
+        (err?.response?.data?.message ? [err.response.data.message] : null);
+
+      toastr.error(apiErrors?.join(" | ") || "Failed to add part.");
     } finally {
       setSubmitting(false);
     }
