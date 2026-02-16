@@ -78,17 +78,10 @@ const getPartImagesByPartId = (id) => {
 // Upload 1+ gallery images for a part.
 // FormData keys must match the API request model:
 // - Images: one or more File entries
-// - SetFirstAsPrimary: "true"/"false" (optional)
 // - SortStart: integer (optional)
-const addPartImages = (
-  id,
-  files = [],
-  { setFirstAsPrimary = false, sortStart = 0 } = {},
-) => {
+const addPartImages = (id, files = []) => {
   const fd = new FormData();
   (files || []).forEach((f) => fd.append("Images", f));
-  fd.append("SetFirstAsPrimary", String(!!setFirstAsPrimary));
-  fd.append("SortStart", String(sortStart));
 
   const config = {
     method: "POST",
@@ -97,7 +90,18 @@ const addPartImages = (
     withCredentials: true,
     crossdomain: true,
   };
+
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const uploadMultipleImages = (id, formData) => {
+  return axios({
+    method: "POST",
+    url: `${homeEndpoint}/${id}/images`,
+    data: formData,
+    withCredentials: true,
+    headers: { "Content-Type": "multipart/form-data" },
+  }).then(onGlobalSuccess);
 };
 
 const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
@@ -181,6 +185,10 @@ const partsService = {
   getByCategoryCustomer,
   getByModelCustomer,
   partImageUrl,
+<<<<<<< HEAD
+=======
+  uploadMultipleImages,
+>>>>>>> dev
 };
 
 export default partsService;
