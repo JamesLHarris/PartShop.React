@@ -94,6 +94,16 @@ const addPartImages = (id, files = []) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+const uploadMultipleImages = (id, formData) => {
+  return axios({
+    method: "POST",
+    url: `${homeEndpoint}/${id}/images`,
+    data: formData,
+    withCredentials: true,
+    headers: { "Content-Type": "multipart/form-data" },
+  }).then(onGlobalSuccess);
+};
+
 const getAllAvailablePartsCustomer = (pageIndex, pageSize) => {
   const config = {
     method: "GET",
@@ -175,6 +185,7 @@ const partsService = {
   getByCategoryCustomer,
   getByModelCustomer,
   partImageUrl,
+  uploadMultipleImages,
 };
 
 export default partsService;
