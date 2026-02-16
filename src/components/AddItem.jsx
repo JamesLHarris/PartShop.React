@@ -124,11 +124,6 @@ function AddItem() {
 
   const buildPayload = () => {
     const payload = new FormData();
-    // Always supply an image value because Parts_Insert requires @Image
-    payload.append(
-      "image",
-      "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
-    );
 
     Object.entries(formData).forEach(([key, value]) => {
       payload.append(
@@ -136,6 +131,12 @@ function AddItem() {
         typeof value === "boolean" ? value.toString() : String(value ?? ""),
       );
     });
+
+    // IMPORTANT: Parts_Insert requires @image, so always send Image
+    payload.append(
+      "Image",
+      "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
+    );
 
     return payload;
   };
