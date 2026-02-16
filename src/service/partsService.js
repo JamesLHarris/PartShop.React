@@ -185,10 +185,7 @@ const partsService = {
   getByCategoryCustomer,
   getByModelCustomer,
   partImageUrl,
-<<<<<<< HEAD
-=======
   uploadMultipleImages,
->>>>>>> dev
 };
 
 export default partsService;
