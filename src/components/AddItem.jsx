@@ -35,7 +35,6 @@ function AddItem() {
   const [formData, setFormData] = useState(initialForm);
 
   // File + preview (fix mismatch: file is File|null, preview is string)
-  const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(addItem);
 
   // Additional gallery images (multi-upload)
@@ -54,15 +53,11 @@ function AddItem() {
   // Revoke blob urls to avoid memory leak
   useEffect(() => {
     return () => {
-      if (previewUrl && previewUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl);
-      }
-
       galleryPreviews
         .filter((u) => u && u.startsWith("blob:"))
         .forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [previewUrl, galleryPreviews]);
+  }, [galleryPreviews]);
 
   const requiredMissing = useMemo(() => {
     const required = [
@@ -103,26 +98,6 @@ function AddItem() {
     }
   };
 
-  const handleImageChange = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-
-    // Optional client-side validation
-    const okTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!okTypes.includes(f.type)) {
-      toastr.error("Image must be JPG, PNG, or WEBP.");
-      return;
-    }
-
-    // revoke old blob
-    if (previewUrl && previewUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    setImageFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
-  };
-
   const handleGalleryChange = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -134,13 +109,17 @@ function AddItem() {
       return;
     }
 
-    // revoke old previews
     galleryPreviews
       .filter((u) => u && u.startsWith("blob:"))
       .forEach((u) => URL.revokeObjectURL(u));
 
+    const previews = files.map((f) => URL.createObjectURL(f));
+
     setGalleryFiles(files);
-    setGalleryPreviews(files.map((f) => URL.createObjectURL(f)));
+    setGalleryPreviews(previews);
+
+    // Primary preview = index 0
+    setPreviewUrl(previews[0]);
   };
 
   const buildPayload = () => {
@@ -152,10 +131,6 @@ function AddItem() {
         typeof value === "boolean" ? value.toString() : String(value ?? ""),
       );
     });
-
-    if (imageFile) {
-      payload.append("image", imageFile); // must match API param name
-    }
 
     return payload;
   };
@@ -174,14 +149,11 @@ function AddItem() {
       const res = await partsService.addPart(payload);
       const newId = res?.item ?? res;
 
-      // Optional: upload additional gallery images after part is created.
       // Primary thumbnail remains the single "image" used in the Add endpoint.
       if (newId && galleryFiles.length > 0) {
-        await partsService.addPartImages(newId, galleryFiles, {
-          setFirstAsPrimary: false,
-          sortStart: 0,
-        });
+        await partsService.addPartImages(newId, galleryFiles);
       }
+
       toastr.success("Part added successfully!");
       navigate("/admin");
     } catch (err) {
@@ -190,6 +162,33 @@ function AddItem() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleGalleryDrop = (e) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
+
+    const okTypes = ["image/jpeg", "image/png", "image/webp"];
+    const invalid = files.find((f) => !okTypes.includes(f.type));
+    if (invalid) {
+      toastr.error("All images must be JPG, PNG, or WEBP.");
+      return;
+    }
+
+    galleryPreviews
+      .filter((u) => u && u.startsWith("blob:"))
+      .forEach((u) => URL.revokeObjectURL(u));
+
+    setGalleryFiles(files);
+    setGalleryPreviews(files.map((f) => URL.createObjectURL(f)));
+
+    // Optional: set preview to first dropped image
+    setPreviewUrl(URL.createObjectURL(files[0]));
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
   };
 
   return (
@@ -226,41 +225,42 @@ function AddItem() {
           <aside className="apd-card apd-media">
             <img src={previewUrl} alt="Preview" className="apd-photo" />
             <div className="apd-actions">
-              <label className="apd-btn apd-btn--outlined apd-btn--file">
-                Replace Photo
-                <input
-                  type="file"
-                  onChange={handleImageChange}
-                  accept="image/*"
-                  hidden
-                />
-              </label>
+              <div
+                className="apd-dropzone"
+                onDrop={handleGalleryDrop}
+                onDragOver={handleDragOver}
+              >
+                <label className="apd-btn apd-btn--outlined apd-btn--file">
+                  Add Photos (Drag & Drop or Click)
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleGalleryChange}
+                    accept="image/*"
+                    hidden
+                  />
+                </label>
 
-              <label className="apd-btn apd-btn--outlined apd-btn--file">
-                Add Gallery Photos
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleGalleryChange}
-                  accept="image/*"
-                  hidden
-                />
-              </label>
-
-              {imageFile ? (
+                <div className="apd-subtle" style={{ marginTop: "8px" }}>
+                  Primary image will be the first file (index 0).
+                </div>
+              </div>
+              {galleryFiles.length > 0 ? (
                 <button
                   type="button"
                   className="apd-btn apd-btn--outlined"
                   onClick={() => {
-                    if (previewUrl.startsWith("blob:")) {
-                      URL.revokeObjectURL(previewUrl);
-                    }
-                    setImageFile(null);
+                    galleryPreviews
+                      .filter((u) => u && u.startsWith("blob:"))
+                      .forEach((u) => URL.revokeObjectURL(u));
+
+                    setGalleryFiles([]);
+                    setGalleryPreviews([]);
                     setPreviewUrl(addItem);
                   }}
                   disabled={submitting}
                 >
-                  Clear
+                  Clear Photos
                 </button>
               ) : (
                 <button type="button" className="apd-btn" disabled>
