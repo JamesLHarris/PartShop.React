@@ -13,6 +13,7 @@ import AdminOrders from "./components/AdminOrders";
 import AdminPartDetails from "./components/AdminPartDetails";
 import CustomerPartDetails from "./components/CustomerPartDetails";
 import { CartProvider } from "./components/CartContext";
+import Home from "./components/Home";
 
 function App() {
   return (
