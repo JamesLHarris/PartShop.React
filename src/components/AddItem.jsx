@@ -133,16 +133,21 @@ function AddItem() {
     });
 
     // IMPORTANT: Parts_Insert requires @image, so always send Image
-    // payload.append(
-    //   "Image",
-    //   "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
-    // );
+    payload.append(
+      "Image",
+      "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
+    );
 
     return payload;
   };
 
   const submitEvent = async (e) => {
     e?.preventDefault?.();
+
+    if (galleryFiles.length === 0) {
+      toastr.error("At least one image is required.");
+      return;
+    }
 
     if (requiredMissing.length > 0) {
       toastr.error(`Missing required fields: ${requiredMissing.join(", ")}`);
