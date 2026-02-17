@@ -10,6 +10,7 @@ import InLineText from "./InLineText";
 import TogglePill from "./TogglePill";
 import LocationModal from "./LocationModal";
 import AuditHistory from "./AuditHistory";
+import ImageDropZone from "./ImageDropZone";
 
 function AdminPartDetails() {
   const { id } = useParams();
@@ -20,10 +21,12 @@ function AdminPartDetails() {
   const [saving, setSaving] = useState(false);
   const [auditRefreshToken, setAuditRefreshToken] = useState(0);
 
-  // images
+  // images (existing gallery)
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
-  const [uploadingImages, setUploadingImages] = useState(false);
+
+  // new images selection for upload
+  const [newGalleryFiles, setNewGalleryFiles] = useState([]);
 
   // Ref lock prevents ultra-fast multi-click PATCH spam before state re-render
   const saveLockRef = useRef(false);
@@ -80,7 +83,6 @@ function AdminPartDetails() {
   }, [id]);
 
   useEffect(() => {
-    // load availability options once
     availableService
       .getAllAvailabilities()
       .then((res) => {
@@ -175,6 +177,7 @@ function AdminPartDetails() {
       locationId: p.locationId ?? get(p, "location", "id"),
       location: p.location,
       rawImage: p.image || "",
+      quantity: p.quantity,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [part]);
@@ -189,19 +192,16 @@ function AdminPartDetails() {
     boxId: get(vm, "location", "box", "id") ?? null,
   };
 
-  // --- PATCH with lock (prevents rapid click spam across toggles, etc.) ---
+  // --- PATCH with lock ---
   const patchAndRefresh = async (payload) => {
-    // Ultra-fast double-click protection
     if (saveLockRef.current) return;
-
-    // Basic guard
     if (!payload || typeof payload !== "object") return;
 
     saveLockRef.current = true;
     setSaving(true);
 
     try {
-      await partsService.patchPart(payload, vm.id); // your service: (payload, id)
+      await partsService.patchPart(payload, vm.id);
       toastr.success("Saved.");
       await refresh();
       setAuditRefreshToken((t) => t + 1);
@@ -220,7 +220,7 @@ function AdminPartDetails() {
     }
   };
 
-  // --- handlers (inline editors + toggles) ---
+  // --- handlers ---
   const onToggleRusted = () => {
     if (saving) return;
     patchAndRefresh({ rusted: !vm.rusted });
@@ -325,35 +325,16 @@ function AdminPartDetails() {
                 Replace Photo
               </button>
 
-              <label className="apd-btn apd-btn--outlined apd-btn--file">
-                Upload Gallery
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  hidden
-                  disabled={saving || uploadingImages}
-                  onChange={async (e) => {
-                    const files = Array.from(e.target.files || []);
-                    if (files.length === 0) return;
-                    try {
-                      setUploadingImages(true);
-                      await partsService.addPartImages(vm.id, files, {
-                        setFirstAsPrimary: false,
-                        sortStart: images.length,
-                      });
-                      toastr.success("Images uploaded.");
-                      await refreshImages();
-                    } catch (err) {
-                      console.error(err);
-                      showApiError(err, "Failed to upload images.");
-                    } finally {
-                      setUploadingImages(false);
-                      e.target.value = ""; // reset so same files can be re-selected
-                    }
-                  }}
-                />
-              </label>
+              <ImageDropZone
+                partId={vm.id}
+                files={newGalleryFiles}
+                onFilesChange={setNewGalleryFiles}
+                onUploaded={refreshImages}
+                disabled={saving}
+                showUploadButton={true}
+                title="Upload Gallery (Drag & Drop or Click)"
+                helper="Primary image will be the first file (index 0)."
+              />
 
               <a
                 className={`apd-btn ${!galleryMain ? "apd-btn--disabled" : ""}`}

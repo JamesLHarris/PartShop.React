@@ -1,14 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toastr from "toastr";
 
-import "./AdminPartDetails.css"; // reuse the same styling language
-import "./add-item.css"; // keep for Add-only overrides if needed
+import "./AdminPartDetails.css";
+import "./add-item.css";
 
 import addItem from "../itemPhotos/add_item.png";
 
 import MakeModelSelector from "./MakeModelSelector";
 import LocationSelector from "./LocationSelector";
+import ImageDropZone from "./ImageDropZone";
 import catagoryService from "../service/catagoryService";
 import partsService from "../service/partsService";
 
@@ -34,14 +35,15 @@ function AddItem() {
   const [catagoryOptions, setCatagoryOptions] = useState([]);
   const [formData, setFormData] = useState(initialForm);
 
-  // File + preview (fix mismatch: file is File|null, preview is string)
   const [previewUrl, setPreviewUrl] = useState(addItem);
 
-  // Additional gallery images (multi-upload)
-  const [galleryFiles, setGalleryFiles] = useState([]); // File[]
-  const [galleryPreviews, setGalleryPreviews] = useState([]); // string[]
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Track current main preview to revoke blobs safely
+  const mainPreviewRef = useRef(addItem);
 
   useEffect(() => {
     catagoryService
@@ -50,14 +52,23 @@ function AddItem() {
       .catch(() => toastr.error("Failed to load categories.", "Error"));
   }, []);
 
-  // Revoke blob urls to avoid memory leak
+  // Cleanup blob urls
   useEffect(() => {
+    const prevPreview = previewUrl;
+    const prevGallery = galleryPreviews;
+
     return () => {
-      galleryPreviews
+      // revoke previous preview if it was a blob
+      if (prevPreview && prevPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(prevPreview);
+      }
+
+      // revoke previous gallery blobs
+      (prevGallery || [])
         .filter((u) => u && u.startsWith("blob:"))
         .forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [galleryPreviews]);
+  }, [previewUrl, galleryPreviews]);
 
   const requiredMissing = useMemo(() => {
     const required = [
@@ -98,28 +109,13 @@ function AddItem() {
     }
   };
 
-  const handleGalleryChange = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const okTypes = ["image/jpeg", "image/png", "image/webp"];
-    const invalid = files.find((f) => !okTypes.includes(f.type));
-    if (invalid) {
-      toastr.error("All images must be JPG, PNG, or WEBP.");
-      return;
-    }
-
-    galleryPreviews
-      .filter((u) => u && u.startsWith("blob:"))
-      .forEach((u) => URL.revokeObjectURL(u));
-
-    const previews = files.map((f) => URL.createObjectURL(f));
-
+  const setGalleryFromDropZone = (files) => {
     setGalleryFiles(files);
+
+    const previews = (files || []).map((f) => URL.createObjectURL(f));
     setGalleryPreviews(previews);
 
-    // Primary preview = index 0
-    setPreviewUrl(previews[0]);
+    setPreviewUrl(previews[0] || addItem);
   };
 
   const buildPayload = () => {
@@ -132,7 +128,8 @@ function AddItem() {
       );
     });
 
-    // IMPORTANT: Parts_Insert requires @image, so always send Image
+    // TEMP: Keep if your DB/proc still requires @image on insert.
+    // Remove later when insert no longer needs placeholder.
     payload.append(
       "Image",
       "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
@@ -160,10 +157,12 @@ function AddItem() {
       const res = await partsService.addPart(payload);
       const newId = res?.item ?? res;
 
-      // Primary thumbnail remains the single "image" used in the Add endpoint.
-      if (newId && galleryFiles.length > 0) {
-        await partsService.addPartImages(newId, galleryFiles);
+      if (!newId) {
+        toastr.error("Insert succeeded but returned no Id.");
+        return;
       }
+
+      await partsService.addPartImages(newId, galleryFiles);
 
       toastr.success("Part added successfully!");
       navigate("/admin");
@@ -181,36 +180,8 @@ function AddItem() {
     }
   };
 
-  const handleGalleryDrop = (e) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files || []);
-    if (files.length === 0) return;
-
-    const okTypes = ["image/jpeg", "image/png", "image/webp"];
-    const invalid = files.find((f) => !okTypes.includes(f.type));
-    if (invalid) {
-      toastr.error("All images must be JPG, PNG, or WEBP.");
-      return;
-    }
-
-    galleryPreviews
-      .filter((u) => u && u.startsWith("blob:"))
-      .forEach((u) => URL.revokeObjectURL(u));
-
-    setGalleryFiles(files);
-    setGalleryPreviews(files.map((f) => URL.createObjectURL(f)));
-
-    // Optional: set preview to first dropped image
-    setPreviewUrl(URL.createObjectURL(files[0]));
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
   return (
     <div className="admin-part-details apd-add">
-      {/* Header matches AdminPartDetails */}
       <header className="apd-header">
         <div className="apd-title">
           <h2>Add Part</h2>
@@ -218,7 +189,6 @@ function AddItem() {
         </div>
 
         <div className="apd-header-actions">
-          {/* Corner submit button (single payload) */}
           <button
             type="submit"
             form="add-part-form"
@@ -236,45 +206,25 @@ function AddItem() {
       </header>
 
       <section className="apd-layout">
-        {/* One form wraps everything so it’s one submission */}
         <form id="add-part-form" onSubmit={submitEvent} className="apd-grid">
-          {/* Image / Actions (same card as AdminPartDetails) */}
           <aside className="apd-card apd-media">
             <img src={previewUrl} alt="Preview" className="apd-photo" />
-            <div className="apd-actions">
-              <div
-                className="apd-dropzone"
-                onDrop={handleGalleryDrop}
-                onDragOver={handleDragOver}
-              >
-                <label className="apd-btn apd-btn--outlined apd-btn--file">
-                  Add Photos (Drag & Drop or Click)
-                  <input
-                    type="file"
-                    multiple
-                    onChange={handleGalleryChange}
-                    accept="image/*"
-                    hidden
-                  />
-                </label>
 
-                <div className="apd-subtle" style={{ marginTop: "8px" }}>
-                  Primary image will be the first file (index 0).
-                </div>
-              </div>
+            <div className="apd-actions">
+              <ImageDropZone
+                files={galleryFiles}
+                onFilesChange={setGalleryFromDropZone}
+                disabled={submitting}
+                showUploadButton={false}
+                title="Add Photos (Drag & Drop or Click)"
+                helper="Primary image will be the first file (index 0)."
+              />
+
               {galleryFiles.length > 0 ? (
                 <button
                   type="button"
                   className="apd-btn apd-btn--outlined"
-                  onClick={() => {
-                    galleryPreviews
-                      .filter((u) => u && u.startsWith("blob:"))
-                      .forEach((u) => URL.revokeObjectURL(u));
-
-                    setGalleryFiles([]);
-                    setGalleryPreviews([]);
-                    setPreviewUrl(addItem);
-                  }}
+                  onClick={() => setGalleryFromDropZone([])}
                   disabled={submitting}
                 >
                   Clear Photos
@@ -296,10 +246,7 @@ function AddItem() {
                       key={src}
                       className="apd-thumb"
                       title={`Gallery image ${idx + 1}`}
-                      onClick={() => {
-                        // allow quick swap: click a thumbnail to make it the main preview (UI-only)
-                        setPreviewUrl(src);
-                      }}
+                      onClick={() => setPreviewUrl(src)}
                     >
                       <img src={src} alt={`Gallery ${idx + 1}`} />
                     </button>
@@ -310,13 +257,7 @@ function AddItem() {
                   type="button"
                   className="apd-btn apd-btn--outlined apd-btn--sm"
                   disabled={submitting}
-                  onClick={() => {
-                    galleryPreviews
-                      .filter((u) => u && u.startsWith("blob:"))
-                      .forEach((u) => URL.revokeObjectURL(u));
-                    setGalleryFiles([]);
-                    setGalleryPreviews([]);
-                  }}
+                  onClick={() => setGalleryFromDropZone([])}
                 >
                   Clear Gallery
                 </button>
@@ -324,7 +265,6 @@ function AddItem() {
             )}
           </aside>
 
-          {/* Specs card */}
           <article className="apd-card apd-specs">
             <h3>Specs</h3>
 
@@ -421,7 +361,6 @@ function AddItem() {
             </dl>
           </article>
 
-          {/* Location card */}
           <article className="apd-card apd-location">
             <h3>Location</h3>
 
@@ -436,7 +375,6 @@ function AddItem() {
             </div>
           </article>
 
-          {/* Meta card (matches Admin view style) */}
           <article className="apd-card apd-meta">
             <h3>Meta</h3>
 
@@ -444,7 +382,6 @@ function AddItem() {
               <div>
                 <dt>Availability</dt>
                 <dd>
-                  {/* Keep as dropdown or whatever you want; this matches the idea */}
                   <select
                     name="availableId"
                     value={formData.availableId}
@@ -502,8 +439,6 @@ function AddItem() {
           </article>
         </form>
 
-        {/* Optional: if you want “Audit History” to occupy the same spot,
-            you can show a placeholder card for continuity */}
         <aside className="apd-card apd-audit-column">
           <h3>Audit History</h3>
           <p className="apd-text">
