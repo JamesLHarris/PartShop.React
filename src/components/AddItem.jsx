@@ -424,8 +424,18 @@ function AddItem() {
                   </label>
                 </dd>
               </div>
+              <div>
+                <dt>Other Box</dt>
+                <dd>
+                  <input
+                    name="otherBox"
+                    value={formData.otherBox}
+                    onChange={handleChange}
+                    className="apd-input"
+                  />
+                </dd>
+              </div>
             </dl>
-
             <div className="apd-desc">
               <h4>Description</h4>
               <textarea
