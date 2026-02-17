@@ -36,6 +36,7 @@ function AdminPartDetails() {
     quantity: false,
     availability: false,
     desc: false,
+    otherBox: false,
   });
 
   const [availabilityOptions, setAvailabilityOptions] = useState([]); // [{value,label}]
@@ -217,6 +218,7 @@ function AdminPartDetails() {
         quantity: false,
         availability: false,
         desc: false,
+        otherBox: false,
       });
     }
   };
@@ -406,71 +408,6 @@ function AdminPartDetails() {
                 <dd>{vm.box || "—"}</dd>
               </div>
 
-              {/* Temporary free-text location note */}
-              <div>
-                <dt>Other Box</dt>
-                <dd>
-                  {edit.otherBox ? (
-                    <div className="apd-inline">
-                      <input
-                        type="text"
-                        maxLength={100}
-                        className="apd-input"
-                        defaultValue={vm.otherBox || ""}
-                        disabled={saving}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const v = e.currentTarget.value?.trim();
-                            patchAndRefresh({ otherBox: v || null });
-                          }
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            setEdit((s) => ({ ...s, otherBox: false }));
-                          }
-                        }}
-                      />
-                      <button
-                        className="apd-btn apd-btn--outlined apd-btn--xs"
-                        disabled={saving}
-                        onClick={(e) => {
-                          const input =
-                            e.currentTarget.parentElement?.querySelector(
-                              "input",
-                            );
-                          const v = input?.value?.trim();
-                          patchAndRefresh({ otherBox: v || null });
-                        }}
-                      >
-                        Save
-                      </button>
-                      <button
-                        className="apd-btn apd-btn--outlined apd-btn--xs"
-                        disabled={saving}
-                        onClick={() =>
-                          setEdit((s) => ({ ...s, otherBox: false }))
-                        }
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {vm.otherBox || "—"}
-                      <button
-                        className="apd-btn apd-btn--outlined apd-btn--xs"
-                        disabled={saving}
-                        onClick={() =>
-                          setEdit((s) => ({ ...s, otherBox: true }))
-                        }
-                      >
-                        Edit
-                      </button>
-                    </>
-                  )}
-                </dd>
-              </div>
-
               <div>
                 <dt>Last Moved</dt>
                 <dd>
@@ -493,6 +430,67 @@ function AdminPartDetails() {
               >
                 Change Location
               </button>
+            </div>
+
+            {/* Temporary free-text location note */}
+            <div>
+              <dt>Other Box</dt>
+              <dd>
+                {edit.otherBox ? (
+                  <div className="apd-inline">
+                    <input
+                      type="text"
+                      maxLength={100}
+                      className="apd-input"
+                      defaultValue={vm.otherBox || ""}
+                      disabled={saving}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const v = e.currentTarget.value?.trim();
+                          patchAndRefresh({ otherBox: v || null });
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setEdit((s) => ({ ...s, otherBox: false }));
+                        }
+                      }}
+                    />
+                    <button
+                      className="apd-btn apd-btn--outlined apd-btn--xs"
+                      disabled={saving}
+                      onClick={(e) => {
+                        const input =
+                          e.currentTarget.parentElement?.querySelector("input");
+                        const v = input?.value?.trim();
+                        patchAndRefresh({ otherBox: v || null });
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="apd-btn apd-btn--outlined apd-btn--xs"
+                      disabled={saving}
+                      onClick={() =>
+                        setEdit((s) => ({ ...s, otherBox: false }))
+                      }
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {vm.otherBox || "—"}
+                    <button
+                      className="apd-btn apd-btn--outlined apd-btn--xs"
+                      disabled={saving}
+                      onClick={() => setEdit((s) => ({ ...s, otherBox: true }))}
+                    >
+                      Edit
+                    </button>
+                  </>
+                )}
+              </dd>
             </div>
           </article>
 

@@ -27,6 +27,7 @@ const initialForm = {
   availableId: 1,
   rusted: false,
   tested: false,
+  otherBox: "",
 };
 
 function AddItem() {
