@@ -7,7 +7,6 @@ import "./AdminPartDetails.css";
 import InLineNumber from "./InLineNumber";
 import InLineSelect from "./InLineSelect";
 import InLineText from "./InLineText";
-import TogglePill from "./TogglePill";
 import LocationModal from "./LocationModal";
 import AuditHistory from "./AuditHistory";
 import ImageDropZone from "./ImageDropZone";
@@ -224,15 +223,6 @@ function AdminPartDetails() {
   };
 
   // --- handlers ---
-  const onToggleRusted = () => {
-    if (saving) return;
-    patchAndRefresh({ rusted: !vm.rusted });
-  };
-
-  const onToggleTested = () => {
-    if (saving) return;
-    patchAndRefresh({ tested: !vm.tested });
-  };
 
   const openLocationModal = () => {
     if (saving) return;
@@ -589,32 +579,6 @@ function AdminPartDetails() {
                       </button>
                     </>
                   )}
-                </dd>
-              </div>
-
-              {/* Rusted / Tested */}
-              <div>
-                <dt>Rusted</dt>
-                <dd>
-                  <TogglePill
-                    on={!!vm.rusted}
-                    onClick={onToggleRusted}
-                    disabled={saving}
-                  >
-                    {vm.rusted ? "Yes" : "No"}
-                  </TogglePill>
-                </dd>
-              </div>
-              <div>
-                <dt>Tested</dt>
-                <dd>
-                  <TogglePill
-                    on={!!vm.tested}
-                    onClick={onToggleTested}
-                    disabled={saving}
-                  >
-                    {vm.tested ? "Yes" : "No"}
-                  </TogglePill>
                 </dd>
               </div>
 

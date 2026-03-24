@@ -25,8 +25,6 @@ const initialForm = {
   catagoryId: "",
   locationId: "",
   availableId: 1,
-  rusted: false,
-  tested: false,
   otherBox: "",
 };
 
@@ -543,36 +541,6 @@ function AddItem() {
                     <option value={2}>Unavailable</option>
                     <option value={3}>Pending</option>
                   </select>
-                </dd>
-              </div>
-
-              <div>
-                <dt>Rusted</dt>
-                <dd>
-                  <label className="apd-check">
-                    <input
-                      type="checkbox"
-                      name="rusted"
-                      checked={formData.rusted}
-                      onChange={handleChange}
-                    />
-                    <span>{formData.rusted ? "Yes" : "No"}</span>
-                  </label>
-                </dd>
-              </div>
-
-              <div>
-                <dt>Tested</dt>
-                <dd>
-                  <label className="apd-check">
-                    <input
-                      type="checkbox"
-                      name="tested"
-                      checked={formData.tested}
-                      onChange={handleChange}
-                    />
-                    <span>{formData.tested ? "Yes" : "No"}</span>
-                  </label>
                 </dd>
               </div>
 

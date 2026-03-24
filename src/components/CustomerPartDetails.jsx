@@ -78,8 +78,6 @@ function CustomerPartDetails() {
             currency: "USD",
           })
         : (part.price ?? "—"),
-    rusted: !!part.rusted,
-    tested: !!part.tested,
     description: part.description,
     image: buildImageUrl(part.image),
     quantity: part.quantity,
@@ -186,16 +184,7 @@ function CustomerPartDetails() {
               <dt>Model</dt>
               <dd>{vm.model || "—"}</dd>
             </div>
-            <div>
-              <dt>Rusted</dt>
-              <dd>{vm.rusted ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>Tested</dt>
-              <dd>{vm.tested ? "Yes" : "No"}</dd>
-            </div>
           </dl>
-          <h3></h3>
           <div className="apd-desc">
             <h4>Description</h4>
             <p className="apd-text">{vm.description || "No description."}</p>

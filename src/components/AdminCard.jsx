@@ -14,8 +14,6 @@ function AdminCard(props) {
 
   const imageUrl = `${partsService.partImageUrl}${props.photo}`;
   const formattedPrice = `$${parseFloat(props.price).toFixed(2)}`;
-  const rustedStatus = props.rusted ? "Rusted" : "Unrusted";
-  const testedStatus = props.tested ? "Tested" : "Untested";
 
   return (
     <div className="single-item">
@@ -27,11 +25,7 @@ function AdminCard(props) {
           <Card.Text>
             <div className="card-info-wrapper">
               <div className="card-condition-row">
-                <div className="card-text">
-                  <div>{testedStatus}</div>
-
-                  <div>{rustedStatus}</div>
-                </div>
+                <div className="card-text"></div>
               </div>
 
               <div className="card-price">{formattedPrice}</div>
