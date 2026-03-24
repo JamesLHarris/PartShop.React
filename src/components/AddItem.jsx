@@ -36,15 +36,16 @@ function AddItem() {
   const [catagoryOptions, setCatagoryOptions] = useState([]);
   const [formData, setFormData] = useState(initialForm);
 
-  const [previewUrl, setPreviewUrl] = useState(addItem);
-
-  const [galleryFiles, setGalleryFiles] = useState([]);
-  const [galleryPreviews, setGalleryPreviews] = useState([]);
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const [submitting, setSubmitting] = useState(false);
 
-  // Track current main preview to revoke blobs safely
-  const mainPreviewRef = useRef(addItem);
+  const galleryItemsRef = useRef([]);
+
+  const selectedItem = galleryItems[selectedIndex] || null;
+  const mainPreviewUrl = selectedItem?.previewUrl || addItem;
+  const mainRotation = selectedItem?.rotation || 0;
 
   useEffect(() => {
     catagoryService
@@ -53,28 +54,28 @@ function AddItem() {
       .catch(() => toastr.error("Failed to load categories.", "Error"));
   }, []);
 
-  // Cleanup blob urls
-  useEffect(() => {
-    const prevPreview = previewUrl;
-    const prevGallery = galleryPreviews;
-
-    return () => {
-      // revoke previous preview if it was a blob
-      if (prevPreview && prevPreview.startsWith("blob:")) {
-        URL.revokeObjectURL(prevPreview);
+  const revokePreviewUrls = (items) => {
+    (items || []).forEach((item) => {
+      if (item?.previewUrl && item.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(item.previewUrl);
       }
+    });
+  };
 
-      // revoke previous gallery blobs
-      (prevGallery || [])
-        .filter((u) => u && u.startsWith("blob:"))
-        .forEach((u) => URL.revokeObjectURL(u));
+  useEffect(() => {
+    galleryItemsRef.current = galleryItems;
+  }, [galleryItems]);
+
+  // Cleanup only on unmount
+  useEffect(() => {
+    return () => {
+      revokePreviewUrls(galleryItemsRef.current);
     };
-  }, [previewUrl, galleryPreviews]);
+  }, []);
 
   const requiredMissing = useMemo(() => {
     const required = [
       "name",
-      "year",
       "partNumber",
       "price",
       "catagoryId",
@@ -82,11 +83,13 @@ function AddItem() {
       "modelId",
       "locationId",
     ];
+
     return required.filter((k) => !String(formData[k] ?? "").trim());
   }, [formData]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -111,12 +114,39 @@ function AddItem() {
   };
 
   const setGalleryFromDropZone = (files) => {
-    setGalleryFiles(files);
+    setGalleryItems((prev) => {
+      revokePreviewUrls(prev);
 
-    const previews = (files || []).map((f) => URL.createObjectURL(f));
-    setGalleryPreviews(previews);
+      const nextItems = (files || []).map((file, index) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        rotation: 0,
+      }));
 
-    setPreviewUrl(previews[0] || addItem);
+      return nextItems;
+    });
+
+    setSelectedIndex(0);
+  };
+
+  const clearGallery = () => {
+    setGalleryFromDropZone([]);
+  };
+
+  const rotateSelected = (delta) => {
+    setGalleryItems((prev) =>
+      prev.map((item, index) => {
+        if (index !== selectedIndex) {
+          return item;
+        }
+
+        return {
+          ...item,
+          rotation: (item.rotation + delta + 360) % 360,
+        };
+      }),
+    );
   };
 
   const buildPayload = () => {
@@ -129,8 +159,6 @@ function AddItem() {
       );
     });
 
-    // TEMP: Keep if your DB/proc still requires @image on insert.
-    // Remove later when insert no longer needs placeholder.
     payload.append(
       "Image",
       "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
@@ -139,10 +167,92 @@ function AddItem() {
     return payload;
   };
 
+  const loadImageFromFile = (file) =>
+    new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(img);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error(`Failed to load image: ${file.name}`));
+      };
+
+      img.src = objectUrl;
+    });
+
+  const canvasToBlob = (canvas, type = "image/jpeg", quality = 0.92) =>
+    new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Canvas conversion failed."));
+            return;
+          }
+
+          resolve(blob);
+        },
+        type,
+        quality,
+      );
+    });
+
+  const rotateFile = async (file, rotation) => {
+    const normalized = ((rotation % 360) + 360) % 360;
+
+    if (normalized === 0) {
+      return file;
+    }
+
+    const img = await loadImageFromFile(file);
+
+    const swapSides = normalized === 90 || normalized === 270;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("Canvas context unavailable.");
+    }
+
+    canvas.width = swapSides ? img.height : img.width;
+    canvas.height = swapSides ? img.width : img.height;
+
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((normalized * Math.PI) / 180);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+    const outputType =
+      file.type === "image/png" || file.type === "image/webp"
+        ? file.type
+        : "image/jpeg";
+
+    const blob = await canvasToBlob(canvas, outputType);
+
+    return new File([blob], file.name, {
+      type: outputType,
+      lastModified: Date.now(),
+    });
+  };
+
+  const buildRotatedFilesForUpload = async (items) => {
+    const rotatedFiles = [];
+
+    for (const item of items) {
+      const rotatedFile = await rotateFile(item.file, item.rotation);
+      rotatedFiles.push(rotatedFile);
+    }
+
+    return rotatedFiles;
+  };
+
   const submitEvent = async (e) => {
     e?.preventDefault?.();
 
-    if (galleryFiles.length === 0) {
+    if (galleryItems.length === 0) {
       toastr.error("At least one image is required.");
       return;
     }
@@ -154,6 +264,7 @@ function AddItem() {
 
     try {
       setSubmitting(true);
+
       const payload = buildPayload();
       const res = await partsService.addPart(payload);
       const newId = res?.item ?? res;
@@ -163,7 +274,8 @@ function AddItem() {
         return;
       }
 
-      await partsService.addPartImages(newId, galleryFiles);
+      const rotatedFiles = await buildRotatedFilesForUpload(galleryItems);
+      await partsService.addPartImages(newId, rotatedFiles);
 
       toastr.success("Part added successfully!");
       navigate("/admin");
@@ -195,7 +307,6 @@ function AddItem() {
             form="add-part-form"
             className="apd-btn apd-btn--primary"
             disabled={submitting}
-            onClick={submitEvent}
           >
             {submitting ? "Submitting..." : "Submit"}
           </button>
@@ -209,58 +320,98 @@ function AddItem() {
       <section className="apd-layout">
         <form id="add-part-form" onSubmit={submitEvent} className="apd-grid">
           <aside className="apd-card apd-media">
-            <img src={previewUrl} alt="Preview" className="apd-photo" />
+            <img
+              src={mainPreviewUrl}
+              alt="Preview"
+              className="apd-photo"
+              style={{
+                transform: `rotate(${mainRotation}deg)`,
+                transition: "transform 0.2s ease",
+              }}
+            />
 
             <div className="apd-actions">
               <ImageDropZone
-                files={galleryFiles}
+                files={galleryItems.map((item) => item.file)}
                 onFilesChange={setGalleryFromDropZone}
                 disabled={submitting}
                 showUploadButton={false}
                 title="Add Photos (Drag & Drop or Click)"
                 helper="Primary image will be the first file (index 0)."
               />
-
-              {galleryFiles.length > 0 ? (
-                <button
-                  type="button"
-                  className="apd-btn apd-btn--outlined"
-                  onClick={() => setGalleryFromDropZone([])}
-                  disabled={submitting}
-                >
-                  Clear Photos
-                </button>
-              ) : (
-                <button type="button" className="apd-btn" disabled>
-                  Download
-                </button>
-              )}
             </div>
 
-            {galleryPreviews.length > 0 && (
-              <div className="apd-gallery">
-                <div className="apd-gallery__label">Gallery Preview</div>
-                <div className="apd-thumbs">
-                  {galleryPreviews.map((src, idx) => (
-                    <button
-                      type="button"
-                      key={src}
-                      className="apd-thumb"
-                      title={`Gallery image ${idx + 1}`}
-                      onClick={() => setPreviewUrl(src)}
-                    >
-                      <img src={src} alt={`Gallery ${idx + 1}`} />
-                    </button>
-                  ))}
+            {galleryItems.length > 0 && (
+              <>
+                <div className="apd-actions">
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined"
+                    onClick={() => rotateSelected(-90)}
+                    disabled={submitting}
+                  >
+                    Rotate Left
+                  </button>
+
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined"
+                    onClick={() => rotateSelected(90)}
+                    disabled={submitting}
+                  >
+                    Rotate Right
+                  </button>
+
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined"
+                    onClick={clearGallery}
+                    disabled={submitting}
+                  >
+                    Clear Photos
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  className="apd-btn apd-btn--outlined apd-btn--sm"
-                  disabled={submitting}
-                  onClick={() => setGalleryFromDropZone([])}
-                >
-                  Clear Gallery
+                <div className="apd-gallery">
+                  <div className="apd-gallery__label">Gallery Preview</div>
+
+                  <div className="apd-thumbs">
+                    {galleryItems.map((item, idx) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className={`apd-thumb ${idx === selectedIndex ? "is-active" : ""}`}
+                        title={`Gallery image ${idx + 1}`}
+                        onClick={() => setSelectedIndex(idx)}
+                      >
+                        <img
+                          src={item.previewUrl}
+                          alt={`Gallery ${idx + 1}`}
+                          style={{
+                            transform: `rotate(${item.rotation}deg)`,
+                            transition: "transform 0.2s ease",
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined apd-btn--sm"
+                    disabled={submitting}
+                    onClick={clearGallery}
+                  >
+                    Clear Gallery
+                  </button>
+                </div>
+              </>
+            )}
+
+            {galleryItems.length === 0 && (
+              <div className="apd-actions">
+                <button type="button" className="apd-btn" disabled>
+                  Download
                 </button>
               </div>
             )}
@@ -290,7 +441,6 @@ function AddItem() {
                     value={formData.year}
                     onChange={handleChange}
                     className="apd-input"
-                    inputMode="numeric"
                   />
                 </dd>
               </div>
@@ -425,6 +575,7 @@ function AddItem() {
                   </label>
                 </dd>
               </div>
+
               <div>
                 <dt>Other Box</dt>
                 <dd>
@@ -437,6 +588,7 @@ function AddItem() {
                 </dd>
               </div>
             </dl>
+
             <div className="apd-desc">
               <h4>Description</h4>
               <textarea
