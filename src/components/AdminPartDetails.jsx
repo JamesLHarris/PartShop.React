@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import toastr from "toastr";
 import partsService from "../service/partsService";
 import availableService from "../service/availableService";
+import conditionService from "../service/conditionService";
 import "./AdminPartDetails.css";
 import InLineNumber from "./InLineNumber";
 import InLineSelect from "./InLineSelect";
@@ -19,6 +20,7 @@ function AdminPartDetails() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [auditRefreshToken, setAuditRefreshToken] = useState(0);
+  const [conditionOptions, setConditionOptions] = useState([]);
 
   // images (existing gallery)
   const [images, setImages] = useState([]);
@@ -36,6 +38,7 @@ function AdminPartDetails() {
     availability: false,
     desc: false,
     otherBox: false,
+    condition: false,
   });
 
   const [availabilityOptions, setAvailabilityOptions] = useState([]); // [{value,label}]
@@ -97,6 +100,20 @@ function AdminPartDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    conditionService
+      .getAllConditions()
+      .then((res) => {
+        const raw = res.item || [];
+        const opts = raw.map((c) => ({
+          value: String(c.id),
+          label: c.name || "",
+        }));
+        setConditionOptions(opts);
+      })
+      .catch(onError);
+  }, []);
+
   // --- utils ---
   const fmtPrice = (n) =>
     typeof n === "number"
@@ -134,6 +151,9 @@ function AdminPartDetails() {
     const availableStatus = p.availableStatus ?? get(p, "available", "status");
     const availableId = p.availableId ?? get(p, "available", "id");
 
+    const conditionId = p.conditionId ?? get(p, "condition", "id");
+    const conditionName = p.conditionName ?? get(p, "condition", "name");
+
     const site = p.siteName ?? get(p, "location", "site", "name");
     const area = p.areaName ?? get(p, "location", "area", "name");
     const aisle = p.aisleName ?? get(p, "location", "aisle", "name");
@@ -142,8 +162,6 @@ function AdminPartDetails() {
     const box = p.boxName ?? get(p, "location", "box", "name");
     const otherBox = p.otherBox ?? p.OtherBox ?? p.other_box;
     const price = p.price;
-    const rusted = p.rusted;
-    const tested = p.tested;
     const lastMovedBy = p.lastMovedBy ?? get(p, "user", "name");
     const dateCreated = p.datecreated ?? p.dateCreated;
     const dateModified = p.datemodified ?? p.dateModified;
@@ -160,6 +178,8 @@ function AdminPartDetails() {
       partNumber,
       availableStatus,
       availableId,
+      conditionId,
+      conditionName,
       site,
       area,
       aisle,
@@ -168,8 +188,6 @@ function AdminPartDetails() {
       box,
       otherBox,
       price,
-      rusted,
-      tested,
       lastMovedBy,
       dateCreated,
       dateModified,
@@ -543,6 +561,39 @@ function AdminPartDetails() {
                         }
                       >
                         Edit
+                      </button>
+                    </>
+                  )}
+                </dd>
+              </div>
+
+              {/* Condition */}
+              <div>
+                <dt>Condition</dt>
+                <dd>
+                  {edit.condition ? (
+                    <InLineSelect
+                      value={String(vm.conditionId ?? "")}
+                      options={conditionOptions}
+                      disabled={saving}
+                      onSubmit={(val) =>
+                        patchAndRefresh({ conditionId: Number(val) })
+                      }
+                      onCancel={() =>
+                        setEdit((e) => ({ ...e, condition: false }))
+                      }
+                    />
+                  ) : (
+                    <>
+                      {vm.conditionName || "—"}
+                      <button
+                        className="apd-btn apd-btn--outlined apd-btn--xs"
+                        disabled={saving}
+                        onClick={() =>
+                          setEdit((e) => ({ ...e, condition: true }))
+                        }
+                      >
+                        Change
                       </button>
                     </>
                   )}

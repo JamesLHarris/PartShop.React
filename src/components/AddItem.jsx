@@ -12,6 +12,7 @@ import LocationSelector from "./LocationSelector";
 import ImageDropZone from "./ImageDropZone";
 import catagoryService from "../service/catagoryService";
 import partsService from "../service/partsService";
+import conditionService from "../service/conditionService";
 
 const initialForm = {
   name: "",
@@ -23,6 +24,7 @@ const initialForm = {
   makeId: "",
   modelId: "",
   catagoryId: "",
+  conditionId: 1,
   locationId: "",
   availableId: 1,
   otherBox: "",
@@ -32,6 +34,7 @@ function AddItem() {
   const navigate = useNavigate();
 
   const [catagoryOptions, setCatagoryOptions] = useState([]);
+  const [conditionOptions, setConditionOptions] = useState([]);
   const [formData, setFormData] = useState(initialForm);
 
   const [galleryItems, setGalleryItems] = useState([]);
@@ -50,6 +53,11 @@ function AddItem() {
       .getAllCatagories()
       .then((res) => setCatagoryOptions(res.item || []))
       .catch(() => toastr.error("Failed to load categories.", "Error"));
+
+    conditionService
+      .getAllConditions()
+      .then((res) => setConditionOptions(res.item || []))
+      .catch(() => toastr.error("Failed to load conditions.", "Error"));
   }, []);
 
   const revokePreviewUrls = (items) => {
@@ -80,6 +88,7 @@ function AddItem() {
       "makeId",
       "modelId",
       "locationId",
+      "conditionId",
     ];
 
     return required.filter((k) => !String(formData[k] ?? "").trim());
@@ -480,7 +489,24 @@ function AddItem() {
                   />
                 </dd>
               </div>
-
+              <div>
+                <dt>Condition</dt>
+                <dd>
+                  <select
+                    name="conditionId"
+                    value={formData.conditionId}
+                    onChange={handleChange}
+                    className="apd-input"
+                  >
+                    <option value="">Select Condition</option>
+                    {conditionOptions.map((condition) => (
+                      <option key={condition.id} value={condition.id}>
+                        {condition.name}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
               <div>
                 <dt>Category</dt>
                 <dd>
