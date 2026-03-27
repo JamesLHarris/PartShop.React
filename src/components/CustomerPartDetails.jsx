@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import partsService from "../service/partsService";
 import "./AdminPartDetails.css";
@@ -11,10 +11,13 @@ const buildImageUrl = (img) =>
       ? img
       : `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
 
+const get = (obj, ...path) =>
+  path.reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+
 function CustomerPartDetails() {
   const { id } = useParams();
   const [part, setPart] = useState(null);
-  const [images, setImages] = useState([]); // PartImages rows
+  const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
   const [loading, setLoading] = useState(true);
   const { add } = useCart();
@@ -25,67 +28,80 @@ function CustomerPartDetails() {
     setPart(null);
     setImages([]);
     setActiveImage("");
+
     partsService
       .getPartByIdCustomer(id)
       .then((res) => setPart(res.item ?? res.items ?? res))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
 
-    // Load gallery images (non-blocking; page still renders with the legacy image)
     partsService
       .getPartImagesByPartId(id)
       .then((res) => {
         const list = res?.item || [];
         setImages(list);
         const primary = list.find((x) => x.isPrimary) || list[0];
-        if (primary?.url) setActiveImage(buildImageUrl(primary.url));
+        if (primary?.url) {
+          setActiveImage(buildImageUrl(primary.url));
+        }
       })
       .catch(() => {
         // ignore; still show legacy image
       });
   }, [id]);
 
-  if (loading || !part)
+  const vm = useMemo(() => {
+    const p = part || {};
+
+    const priceValue =
+      typeof p.price === "number"
+        ? p.price.toLocaleString(undefined, {
+            style: "currency",
+            currency: "USD",
+          })
+        : (p.price ?? "—");
+
+    return {
+      id: p.id,
+      name: p.name,
+      category: p.catagoryName ?? get(p, "catagory", "name"),
+      company: p.company ?? get(p, "make", "company"),
+      model: p.modelName ?? get(p, "make", "model", "name"),
+      year: p.year,
+      partNumber: p.partnumber ?? p.partNumber,
+      availableStatus: p.availableStatus ?? get(p, "available", "status"),
+      availableId: p.availableId ?? get(p, "available", "id"),
+      conditionId: p.conditionId ?? get(p, "condition", "id"),
+      conditionName: p.conditionName ?? get(p, "condition", "name"),
+      price: priceValue,
+      unitPrice: Number(p.price) || 0,
+      description: p.description,
+      image: buildImageUrl(p.image),
+      quantity: p.quantity,
+      dateCreated: p.datecreated ?? p.dateCreated,
+      dateModified: p.datemodified ?? p.dateModified,
+    };
+  }, [part]);
+
+  if (loading || !part) {
     return <div className="apd-skeleton" aria-busy="true" />;
+  }
+
+  const galleryMain = activeImage || vm.image;
 
   const handleAdd = () => {
-    const cartImage =
-      galleryMain || `${partsService.partImageUrl}${part.image}`;
+    const cartImage = galleryMain || vm.image;
+
     add(
       {
-        id: part.id,
-        name: part.name,
+        id: vm.id,
+        name: vm.name,
         image: cartImage,
-        unitPrice: Number(part.price),
+        unitPrice: vm.unitPrice,
       },
       1,
     );
   };
-
-  const vm = {
-    id: part.id,
-    name: part.name,
-    category: part.catagory?.name,
-    company: part.make?.company,
-    model: part.make?.model?.name,
-    year: part.year,
-    partNumber: part.partnumber ?? part.partNumber,
-    availableStatus: part.availableStatus ?? part.available?.status,
-    price:
-      typeof part.price === "number"
-        ? part.price.toLocaleString(undefined, {
-            style: "currency",
-            currency: "USD",
-          })
-        : (part.price ?? "—"),
-    description: part.description,
-    image: buildImageUrl(part.image),
-    quantity: part.quantity,
-    dateCreated: part.datecreated ?? part.dateCreated,
-    dateModified: part.datemodified ?? part.dateModified,
-  };
-
-  const galleryMain = activeImage || vm.image;
 
   return (
     <div className="admin-part-details">
@@ -108,7 +124,6 @@ function CustomerPartDetails() {
             </span>
           )}
         </div>
-        {/* <div className="apd-subtle">ID #{vm.id}</div> */}
       </header>
 
       <section className="apd-grid">
@@ -126,6 +141,7 @@ function CustomerPartDetails() {
                 {images.map((img) => {
                   const src = buildImageUrl(img.url);
                   const key = img.id || img.url;
+
                   return (
                     <button
                       key={key}
@@ -170,7 +186,11 @@ function CustomerPartDetails() {
             </div>
             <div>
               <dt>Year</dt>
-              <dd>{vm.year ?? "—"}</dd>
+              <dd>{vm.year || "—"}</dd>
+            </div>
+            <div>
+              <dt>Condition</dt>
+              <dd>{vm.conditionName || "—"}</dd>
             </div>
             <div>
               <dt>Category</dt>
@@ -185,12 +205,14 @@ function CustomerPartDetails() {
               <dd>{vm.model || "—"}</dd>
             </div>
           </dl>
+
           <div className="apd-desc">
             <h4>Description</h4>
             <p className="apd-text">{vm.description || "No description."}</p>
           </div>
         </article>
       </section>
+
       <div className="apd-actions" style={{ marginBottom: "20px" }}>
         <button
           type="button"

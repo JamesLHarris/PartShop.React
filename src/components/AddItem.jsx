@@ -13,6 +13,7 @@ import ImageDropZone from "./ImageDropZone";
 import catagoryService from "../service/catagoryService";
 import partsService from "../service/partsService";
 import conditionService from "../service/conditionService";
+import shippingPolicyService from "../service/shippingPolicyService";
 
 const initialForm = {
   name: "",
@@ -25,6 +26,7 @@ const initialForm = {
   modelId: "",
   catagoryId: "",
   conditionId: 1,
+  shippingPolicyId: "",
   locationId: "",
   availableId: 1,
   otherBox: "",
@@ -35,6 +37,7 @@ function AddItem() {
 
   const [catagoryOptions, setCatagoryOptions] = useState([]);
   const [conditionOptions, setConditionOptions] = useState([]);
+  const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
   const [formData, setFormData] = useState(initialForm);
 
   const [galleryItems, setGalleryItems] = useState([]);
@@ -58,6 +61,11 @@ function AddItem() {
       .getAllConditions()
       .then((res) => setConditionOptions(res.item || []))
       .catch(() => toastr.error("Failed to load conditions.", "Error"));
+
+    shippingPolicyService
+      .getAllShippingPolicies()
+      .then((res) => setShippingPolicyOptions(res.item || []))
+      .catch(() => toastr.error("Failed to load shipping policies.", "Error"));
   }, []);
 
   const revokePreviewUrls = (items) => {
@@ -72,7 +80,6 @@ function AddItem() {
     galleryItemsRef.current = galleryItems;
   }, [galleryItems]);
 
-  // Cleanup only on unmount
   useEffect(() => {
     return () => {
       revokePreviewUrls(galleryItemsRef.current);
@@ -87,8 +94,9 @@ function AddItem() {
       "catagoryId",
       "makeId",
       "modelId",
-      "locationId",
       "conditionId",
+      "shippingPolicyId",
+      "locationId",
     ];
 
     return required.filter((k) => !String(formData[k] ?? "").trim());
@@ -489,6 +497,7 @@ function AddItem() {
                   />
                 </dd>
               </div>
+
               <div>
                 <dt>Condition</dt>
                 <dd>
@@ -507,6 +516,26 @@ function AddItem() {
                   </select>
                 </dd>
               </div>
+
+              <div>
+                <dt>Shipping Policy</dt>
+                <dd>
+                  <select
+                    name="shippingPolicyId"
+                    value={formData.shippingPolicyId}
+                    onChange={handleChange}
+                    className="apd-input"
+                  >
+                    <option value="">Select Shipping Policy</option>
+                    {shippingPolicyOptions.map((policy) => (
+                      <option key={policy.id} value={policy.id}>
+                        {policy.name}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
+
               <div>
                 <dt>Category</dt>
                 <dd>

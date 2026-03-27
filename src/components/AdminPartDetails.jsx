@@ -4,6 +4,7 @@ import toastr from "toastr";
 import partsService from "../service/partsService";
 import availableService from "../service/availableService";
 import conditionService from "../service/conditionService";
+import shippingPolicyService from "../service/shippingPolicyService";
 import "./AdminPartDetails.css";
 import InLineNumber from "./InLineNumber";
 import InLineSelect from "./InLineSelect";
@@ -15,21 +16,18 @@ import ImageDropZone from "./ImageDropZone";
 function AdminPartDetails() {
   const { id } = useParams();
 
-  // data + ui state
   const [part, setPart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [auditRefreshToken, setAuditRefreshToken] = useState(0);
   const [conditionOptions, setConditionOptions] = useState([]);
+  const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
 
-  // images (existing gallery)
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
 
-  // new images selection for upload
   const [newGalleryFiles, setNewGalleryFiles] = useState([]);
 
-  // Ref lock prevents ultra-fast multi-click PATCH spam before state re-render
   const saveLockRef = useRef(false);
 
   const [edit, setEdit] = useState({
@@ -39,12 +37,12 @@ function AdminPartDetails() {
     desc: false,
     otherBox: false,
     condition: false,
+    shippingPolicy: false,
   });
 
-  const [availabilityOptions, setAvailabilityOptions] = useState([]); // [{value,label}]
+  const [availabilityOptions, setAvailabilityOptions] = useState([]);
   const [locModalOpen, setLocModalOpen] = useState(false);
 
-  // --- fetchers ---
   const onGetSuccess = (response) => {
     setPart(response.item);
     setLoading(false);
@@ -114,7 +112,20 @@ function AdminPartDetails() {
       .catch(onError);
   }, []);
 
-  // --- utils ---
+  useEffect(() => {
+    shippingPolicyService
+      .getAllShippingPolicies()
+      .then((res) => {
+        const raw = res.item || [];
+        const opts = raw.map((sp) => ({
+          value: String(sp.id),
+          label: sp.name || "",
+        }));
+        setShippingPolicyOptions(opts);
+      })
+      .catch(onError);
+  }, []);
+
   const fmtPrice = (n) =>
     typeof n === "number"
       ? n.toLocaleString(undefined, { style: "currency", currency: "USD" })
@@ -137,7 +148,6 @@ function AdminPartDetails() {
     toastr.error(msg);
   };
 
-  // --- normalize shape for safe rendering ---
   const vm = useMemo(() => {
     const p = part || {};
 
@@ -153,6 +163,11 @@ function AdminPartDetails() {
 
     const conditionId = p.conditionId ?? get(p, "condition", "id");
     const conditionName = p.conditionName ?? get(p, "condition", "name");
+
+    const shippingPolicyId =
+      p.shippingPolicyId ?? get(p, "shippingPolicy", "id");
+    const shippingPolicyName =
+      p.shippingPolicyName ?? get(p, "shippingPolicy", "name");
 
     const site = p.siteName ?? get(p, "location", "site", "name");
     const area = p.areaName ?? get(p, "location", "area", "name");
@@ -180,6 +195,8 @@ function AdminPartDetails() {
       availableId,
       conditionId,
       conditionName,
+      shippingPolicyId,
+      shippingPolicyName,
       site,
       area,
       aisle,
@@ -201,7 +218,6 @@ function AdminPartDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [part]);
 
-  // Harden modal initial values (prevents crashes on missing nested objects)
   const initialLocation = {
     siteId: get(vm, "location", "site", "id") ?? null,
     areaId: get(vm, "location", "area", "id") ?? null,
@@ -211,7 +227,6 @@ function AdminPartDetails() {
     boxId: get(vm, "location", "box", "id") ?? null,
   };
 
-  // --- PATCH with lock ---
   const patchAndRefresh = async (payload) => {
     if (saveLockRef.current) return;
     if (!payload || typeof payload !== "object") return;
@@ -236,11 +251,11 @@ function AdminPartDetails() {
         availability: false,
         desc: false,
         otherBox: false,
+        condition: false,
+        shippingPolicy: false,
       });
     }
   };
-
-  // --- handlers ---
 
   const openLocationModal = () => {
     if (saving) return;
@@ -289,7 +304,6 @@ function AdminPartDetails() {
 
       <section className="apd-layout">
         <div className="apd-grid">
-          {/* Image / Actions */}
           <aside className="apd-card apd-media">
             {galleryMain ? (
               <img src={galleryMain} alt={vm.name} className="apd-photo" />
@@ -360,7 +374,6 @@ function AdminPartDetails() {
             </div>
           </aside>
 
-          {/* Core Specs */}
           <article className="apd-card apd-specs">
             <h3>Specs</h3>
             <dl className="apd-dl">
@@ -387,7 +400,6 @@ function AdminPartDetails() {
             </dl>
           </article>
 
-          {/* Location */}
           <article className="apd-card apd-location">
             <h3>Location</h3>
             <dl className="apd-dl">
@@ -440,7 +452,6 @@ function AdminPartDetails() {
               </button>
             </div>
 
-            {/* Temporary free-text location note */}
             <div>
               <dt>Other Box</dt>
               <dd>
@@ -502,11 +513,9 @@ function AdminPartDetails() {
             </div>
           </article>
 
-          {/* Meta */}
           <article className="apd-card apd-meta">
             <h3>Meta</h3>
             <dl className="apd-dl">
-              {/* Price */}
               <div>
                 <dt>Price</dt>
                 <dd>
@@ -532,7 +541,6 @@ function AdminPartDetails() {
                 </dd>
               </div>
 
-              {/* Quantity */}
               <div>
                 <dt>Quantity</dt>
                 <dd>
@@ -567,7 +575,6 @@ function AdminPartDetails() {
                 </dd>
               </div>
 
-              {/* Condition */}
               <div>
                 <dt>Condition</dt>
                 <dd>
@@ -600,7 +607,38 @@ function AdminPartDetails() {
                 </dd>
               </div>
 
-              {/* Availability */}
+              <div>
+                <dt>Shipping Policy</dt>
+                <dd>
+                  {edit.shippingPolicy ? (
+                    <InLineSelect
+                      value={String(vm.shippingPolicyId ?? "")}
+                      options={shippingPolicyOptions}
+                      disabled={saving}
+                      onSubmit={(val) =>
+                        patchAndRefresh({ shippingPolicyId: Number(val) })
+                      }
+                      onCancel={() =>
+                        setEdit((e) => ({ ...e, shippingPolicy: false }))
+                      }
+                    />
+                  ) : (
+                    <>
+                      {vm.shippingPolicyName || "—"}
+                      <button
+                        className="apd-btn apd-btn--outlined apd-btn--xs"
+                        disabled={saving}
+                        onClick={() =>
+                          setEdit((e) => ({ ...e, shippingPolicy: true }))
+                        }
+                      >
+                        Change
+                      </button>
+                    </>
+                  )}
+                </dd>
+              </div>
+
               <div>
                 <dt>Availability</dt>
                 <dd>
@@ -633,7 +671,6 @@ function AdminPartDetails() {
                 </dd>
               </div>
 
-              {/* Date Added */}
               <div>
                 <dt>Date Added</dt>
                 <dd>
@@ -648,7 +685,6 @@ function AdminPartDetails() {
               </div>
             </dl>
 
-            {/* Description */}
             <div className="apd-desc">
               <h4>Description</h4>
               {edit.desc ? (
@@ -677,7 +713,6 @@ function AdminPartDetails() {
           </article>
         </div>
 
-        {/* AUDIT HISTORY */}
         <aside className="apd-card apd-audit-column">
           <h3>Audit History</h3>
           <AuditHistory
