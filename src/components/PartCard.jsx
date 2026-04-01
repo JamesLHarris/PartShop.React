@@ -27,7 +27,6 @@ function PartCard(props) {
               <div className="card-condition-row">
                 <div className="card-text"></div>
               </div>
-              <div className="card-price">{formattedPrice}</div>
             </div>
           </Card.Text>
           <hr className="card-divider" />
@@ -35,6 +34,8 @@ function PartCard(props) {
 
         <Card.Footer>
           <div className="part-name">{props.name}</div>
+          <div className="card-price">{formattedPrice}</div>
+
           <button className="card-button" onClick={partClickEvent}>
             View
           </button>

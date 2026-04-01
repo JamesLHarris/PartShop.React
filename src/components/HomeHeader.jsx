@@ -88,6 +88,7 @@ function HomeHeader({ value, onChange }) {
 
   const onGetModelSuccess = (response) => {
     let getData = response.item;
+    console.log("Model Data", getData);
     setModelsData((prevState) => {
       const pd = { ...prevState };
       pd.optionsComponents = mapModelOptions(getData);
@@ -102,6 +103,7 @@ function HomeHeader({ value, onChange }) {
 
   const onGetMakeSuccess = (response) => {
     let getData = response.item;
+    console.log("Make Data", getData);
     setMakeData((prevState) => {
       const pd = { ...prevState };
       pd.optionsComponents = mapMakeOptions(getData);
@@ -236,7 +238,7 @@ function HomeHeader({ value, onChange }) {
 
         <div className="header-row">
           <nav className="nav-links">
-            <a href="/">Home</a>
+            <a href="/home">Home</a>
             <a href="/browse" onClick={handleRecentlyListedClick}>
               Recently Listed
             </a>
@@ -245,9 +247,8 @@ function HomeHeader({ value, onChange }) {
           <div className="top-selection">
             <MakeWithModelsFlyout
               makes={makeData.optionsUnmapped}
-              modelsAll={modelsData.optionsUnmapped}
-              onSelectMake={handleMakeSelected}
-              onSelectModel={handleModelSelected}
+              onSelectMake={handleMakeSelect}
+              onSelectModel={handleModelSelect}
             />
             {modelsData.optionsComponents}
             {catagoryData.optionsComponents}
