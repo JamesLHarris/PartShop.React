@@ -4,6 +4,13 @@ import "./CardStyles.css";
 import { useNavigate } from "react-router-dom";
 import partsService from "../service/partsService";
 
+const buildImageUrl = (img) =>
+  !img
+    ? ""
+    : /^https?:\/\//i.test(img)
+      ? img
+      : `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
+
 function AdminCard(props) {
   const navigate = useNavigate();
 
@@ -12,20 +19,26 @@ function AdminCard(props) {
     console.log("Selected Admin Card:", props);
   };
 
-  const imageUrl = `${partsService.partImageUrl}${props.photo}`;
-  const formattedPrice = `$${parseFloat(props.price).toFixed(2)}`;
+  const imageUrl = buildImageUrl(props.photo);
+  const formattedPrice = `$${parseFloat(props.price || 0).toFixed(2)}`;
 
   return (
     <div className="single-item">
       <Card>
         <Card.Body>
           <Card.Title>
-            <img src={imageUrl} className="item-image" alt="item" />
+            {imageUrl ? (
+              <img src={imageUrl} className="item-image" alt="item" />
+            ) : (
+              <div className="item-image item-image--empty">No Image</div>
+            )}
           </Card.Title>
           <Card.Text>
             <div className="card-info-wrapper">
               <div className="card-condition-row">
-                <div className="card-text"></div>
+                <div className="card-text">
+                  {props.condition?.name ?? props.conditionName ?? ""}
+                </div>
               </div>
 
               <div className="card-price">{formattedPrice}</div>

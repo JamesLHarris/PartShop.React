@@ -22,12 +22,13 @@ function AdminPartDetails() {
   const [auditRefreshToken, setAuditRefreshToken] = useState(0);
   const [conditionOptions, setConditionOptions] = useState([]);
   const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
+  const [availabilityOptions, setAvailabilityOptions] = useState([]);
 
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
-
   const [newGalleryFiles, setNewGalleryFiles] = useState([]);
 
+  const [locModalOpen, setLocModalOpen] = useState(false);
   const saveLockRef = useRef(false);
 
   const [edit, setEdit] = useState({
@@ -40,8 +41,27 @@ function AdminPartDetails() {
     shippingPolicy: false,
   });
 
-  const [availabilityOptions, setAvailabilityOptions] = useState([]);
-  const [locModalOpen, setLocModalOpen] = useState(false);
+  const get = (obj, ...keys) =>
+    keys.reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
+
+  const buildImageUrl = (img) => {
+    if (!img) return "";
+    if (/^https?:\/\//i.test(img)) return img;
+    return `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
+  };
+
+  const fmtPrice = (n) =>
+    typeof n === "number"
+      ? n.toLocaleString(undefined, { style: "currency", currency: "USD" })
+      : n;
+
+  const showApiError = (err, fallback = "Update failed.") => {
+    const msg =
+      err?.response?.data?.errors?.[0] ||
+      err?.response?.data?.error ||
+      fallback;
+    toastr.error(msg);
+  };
 
   const onGetSuccess = (response) => {
     setPart(response.item);
@@ -103,11 +123,12 @@ function AdminPartDetails() {
       .getAllConditions()
       .then((res) => {
         const raw = res.item || [];
-        const opts = raw.map((c) => ({
-          value: String(c.id),
-          label: c.name || "",
-        }));
-        setConditionOptions(opts);
+        setConditionOptions(
+          raw.map((c) => ({
+            value: String(c.id),
+            label: c.name || "",
+          })),
+        );
       })
       .catch(onError);
   }, []);
@@ -117,103 +138,83 @@ function AdminPartDetails() {
       .getAllShippingPolicies()
       .then((res) => {
         const raw = res.item || [];
-        const opts = raw.map((sp) => ({
-          value: String(sp.id),
-          label: sp.name || "",
-        }));
-        setShippingPolicyOptions(opts);
+        setShippingPolicyOptions(
+          raw.map((sp) => ({
+            value: String(sp.id),
+            label: sp.name || "",
+          })),
+        );
       })
       .catch(onError);
   }, []);
 
-  const fmtPrice = (n) =>
-    typeof n === "number"
-      ? n.toLocaleString(undefined, { style: "currency", currency: "USD" })
-      : n;
-
-  const get = (obj, ...keys) =>
-    keys.reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
-
-  function buildImageUrl(img) {
-    if (!img) return "";
-    if (/^https?:\/\//i.test(img)) return img;
-    return `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
-  }
-
-  const showApiError = (err, fallback = "Update failed.") => {
-    const msg =
-      err?.response?.data?.errors?.[0] ||
-      err?.response?.data?.error ||
-      fallback;
-    toastr.error(msg);
-  };
-
   const vm = useMemo(() => {
     const p = part || {};
 
-    const name = p.name;
-    const category = p.catagoryName ?? get(p, "catagory", "name");
-    const company = p.company ?? get(p, "make", "company");
-    const model = p.modelName ?? get(p, "make", "model", "name");
-    const year = p.year;
-    const partNumber = p.partnumber ?? p.partNumber;
+    const rawCategories = Array.isArray(p.categories) ? p.categories : [];
+    const rawFitments = Array.isArray(p.fitments) ? p.fitments : [];
 
-    const availableStatus = p.availableStatus ?? get(p, "available", "status");
-    const availableId = p.availableId ?? get(p, "available", "id");
+    const normalizedCategories = rawCategories
+      .map((c) => ({
+        id: c.id,
+        catagoryId: c.catagoryId,
+        catagoryName: c.catagoryName,
+      }))
+      .filter((c) => c.catagoryId || c.catagoryName);
 
-    const conditionId = p.conditionId ?? get(p, "condition", "id");
-    const conditionName = p.conditionName ?? get(p, "condition", "name");
-
-    const shippingPolicyId =
-      p.shippingPolicyId ?? get(p, "shippingPolicy", "id");
-    const shippingPolicyName =
-      p.shippingPolicyName ?? get(p, "shippingPolicy", "name");
-
-    const site = p.siteName ?? get(p, "location", "site", "name");
-    const area = p.areaName ?? get(p, "location", "area", "name");
-    const aisle = p.aisleName ?? get(p, "location", "aisle", "name");
-    const shelf = p.shelfName ?? get(p, "location", "shelf", "name");
-    const section = p.sectionName ?? get(p, "location", "section", "name");
-    const box = p.boxName ?? get(p, "location", "box", "name");
-    const otherBox = p.otherBox ?? p.OtherBox ?? p.other_box;
-    const price = p.price;
-    const lastMovedBy = p.lastMovedBy ?? get(p, "user", "name");
-    const dateCreated = p.datecreated ?? p.dateCreated;
-    const dateModified = p.datemodified ?? p.dateModified;
-
-    const image = buildImageUrl(p.image);
+    const normalizedFitments = rawFitments
+      .map((f) => ({
+        id: f.id,
+        makeId: f.makeId,
+        company: f.company,
+        modelId: f.modelId,
+        modelName: f.modelName,
+        yearStart: f.yearStart,
+        yearEnd: f.yearEnd,
+      }))
+      .filter((f) => f.makeId || f.company || f.modelName);
 
     return {
       id: p.id,
-      name,
-      category,
-      company,
-      model,
-      year,
-      partNumber,
-      availableStatus,
-      availableId,
-      conditionId,
-      conditionName,
-      shippingPolicyId,
-      shippingPolicyName,
-      site,
-      area,
-      aisle,
-      shelf,
-      section,
-      box,
-      otherBox,
-      price,
-      lastMovedBy,
-      dateCreated,
-      dateModified,
-      image,
+      name: p.name,
+      category: p.catagoryName ?? get(p, "catagory", "name"),
+      company: p.company ?? get(p, "make", "company"),
+      model: p.modelName ?? get(p, "make", "model", "name"),
+      year: p.year,
+      partNumber: p.partnumber ?? p.partNumber,
+
+      availableStatus: p.availableStatus ?? get(p, "available", "status"),
+      availableId: p.availableId ?? get(p, "available", "id"),
+
+      conditionId: p.conditionId ?? get(p, "condition", "id"),
+      conditionName: p.conditionName ?? get(p, "condition", "name"),
+
+      shippingPolicyId: p.shippingPolicyId ?? get(p, "shippingPolicy", "id"),
+      shippingPolicyName:
+        p.shippingPolicyName ?? get(p, "shippingPolicy", "name"),
+
+      site: p.siteName ?? get(p, "location", "site", "name"),
+      area: p.areaName ?? get(p, "location", "area", "name"),
+      aisle: p.aisleName ?? get(p, "location", "aisle", "name"),
+      shelf: p.shelfName ?? get(p, "location", "shelf", "name"),
+      section: p.sectionName ?? get(p, "location", "section", "name"),
+      box: p.boxName ?? get(p, "location", "box", "name"),
+      otherBox: p.otherBox ?? p.OtherBox ?? p.other_box,
+
+      price: p.price,
+      quantity: p.quantity,
+      lastMovedBy: p.lastMovedBy ?? get(p, "user", "name"),
+      dateCreated: p.datecreated ?? p.dateCreated,
+      dateModified: p.datemodified ?? p.dateModified,
+
+      image: buildImageUrl(p.image),
+      rawImage: p.image || "",
       description: p.description,
       locationId: p.locationId ?? get(p, "location", "id"),
       location: p.location,
-      rawImage: p.image || "",
-      quantity: p.quantity,
+
+      categories: normalizedCategories,
+      fitments: normalizedFitments,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [part]);
@@ -267,6 +268,12 @@ function AdminPartDetails() {
     setLocModalOpen(false);
   };
 
+  const renderYearRange = (start, end) => {
+    if (start == null && end == null) return "—";
+    if (start === end) return String(start);
+    return `${start}–${end}`;
+  };
+
   if (loading) return <div className="apd-skeleton" aria-busy="true" />;
   if (!part) return <p>Not found.</p>;
 
@@ -293,6 +300,7 @@ function AdminPartDetails() {
             </span>
           )}
         </div>
+
         <div className="apd-subtle">
           ID #{vm.id}
           {vm.dateModified
@@ -342,8 +350,9 @@ function AdminPartDetails() {
                   if (saving) return;
                   const current = vm.rawImage || "";
                   const path = window.prompt("Image path or URL:", current);
-                  if (path && path.trim())
+                  if (path && path.trim()) {
                     patchAndRefresh({ image: path.trim() });
+                  }
                 }}
                 disabled={saving}
               >
@@ -358,7 +367,7 @@ function AdminPartDetails() {
                 disabled={saving}
                 showUploadButton={true}
                 title="Upload Gallery (Drag & Drop or Click)"
-                helper="Primary image will be the first file (index 0)."
+                helper="Primary image will be the first file."
               />
 
               <a
@@ -382,19 +391,19 @@ function AdminPartDetails() {
                 <dd>{vm.partNumber || "—"}</dd>
               </div>
               <div>
-                <dt>Year</dt>
+                <dt>Primary Year</dt>
                 <dd>{vm.year ?? "—"}</dd>
               </div>
               <div>
-                <dt>Category</dt>
+                <dt>Primary Category</dt>
                 <dd>{vm.category || "—"}</dd>
               </div>
               <div>
-                <dt>Make</dt>
+                <dt>Primary Make</dt>
                 <dd>{vm.company || "—"}</dd>
               </div>
               <div>
-                <dt>Model</dt>
+                <dt>Primary Model</dt>
                 <dd>{vm.model || "—"}</dd>
               </div>
             </dl>
@@ -427,7 +436,6 @@ function AdminPartDetails() {
                 <dt>Box</dt>
                 <dd>{vm.box || "—"}</dd>
               </div>
-
               <div>
                 <dt>Last Moved</dt>
                 <dd>
@@ -441,6 +449,7 @@ function AdminPartDetails() {
                 <dd>{vm.lastMovedBy || "—"}</dd>
               </div>
             </dl>
+
             <div className="apd-actions">
               <button
                 type="button"
@@ -452,7 +461,7 @@ function AdminPartDetails() {
               </button>
             </div>
 
-            <div>
+            <div className="apd-other-box-row">
               <dt>Other Box</dt>
               <dd>
                 {edit.otherBox ? (
@@ -498,8 +507,8 @@ function AdminPartDetails() {
                     </button>
                   </div>
                 ) : (
-                  <>
-                    {vm.otherBox || "—"}
+                  <div className="apd-inline-wrap">
+                    <span>{vm.otherBox || "—"}</span>
                     <button
                       className="apd-btn apd-btn--outlined apd-btn--xs"
                       disabled={saving}
@@ -507,9 +516,58 @@ function AdminPartDetails() {
                     >
                       Edit
                     </button>
-                  </>
+                  </div>
                 )}
               </dd>
+            </div>
+          </article>
+
+          <article className="apd-card apd-relations">
+            <h3>Compatibility & Categories</h3>
+
+            <div className="apd-relations-section">
+              <h4>Categories</h4>
+              {vm.categories.length > 0 ? (
+                <div className="apd-chip-list">
+                  {vm.categories.map((cat) => (
+                    <span
+                      key={cat.id || `${cat.catagoryId}-${cat.catagoryName}`}
+                      className="apd-chip"
+                    >
+                      {cat.catagoryName || `Category #${cat.catagoryId}`}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="apd-empty-note">No related categories.</div>
+              )}
+            </div>
+
+            <div className="apd-relations-section">
+              <h4>Fitments</h4>
+              {vm.fitments.length > 0 ? (
+                <div className="apd-fitment-list">
+                  {vm.fitments.map((fitment) => (
+                    <div
+                      key={
+                        fitment.id ||
+                        `${fitment.makeId}-${fitment.modelId}-${fitment.yearStart}-${fitment.yearEnd}`
+                      }
+                      className="apd-fitment-card"
+                    >
+                      <div className="apd-fitment-title">
+                        {fitment.company || "—"} {fitment.modelName || ""}
+                      </div>
+                      <div className="apd-subtle">
+                        Years:{" "}
+                        {renderYearRange(fitment.yearStart, fitment.yearEnd)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="apd-empty-note">No related fitments.</div>
+              )}
             </div>
           </article>
 

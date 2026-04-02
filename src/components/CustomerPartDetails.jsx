@@ -16,12 +16,13 @@ const get = (obj, ...path) =>
 
 function CustomerPartDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { add } = useCart();
+
   const [part, setPart] = useState(null);
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
   const [loading, setLoading] = useState(true);
-  const { add } = useCart();
-  const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
@@ -46,12 +47,35 @@ function CustomerPartDetails() {
         }
       })
       .catch(() => {
-        // ignore; still show legacy image
+        // ignore
       });
   }, [id]);
 
   const vm = useMemo(() => {
     const p = part || {};
+
+    const rawCategories = Array.isArray(p.categories) ? p.categories : [];
+    const rawFitments = Array.isArray(p.fitments) ? p.fitments : [];
+
+    const normalizedCategories = rawCategories
+      .map((c) => ({
+        id: c.id,
+        catagoryId: c.catagoryId,
+        catagoryName: c.catagoryName,
+      }))
+      .filter((c) => c.catagoryId || c.catagoryName);
+
+    const normalizedFitments = rawFitments
+      .map((f) => ({
+        id: f.id,
+        makeId: f.makeId,
+        company: f.company,
+        modelId: f.modelId,
+        modelName: f.modelName,
+        yearStart: f.yearStart,
+        yearEnd: f.yearEnd,
+      }))
+      .filter((f) => f.makeId || f.company || f.modelName);
 
     const priceValue =
       typeof p.price === "number"
@@ -80,8 +104,16 @@ function CustomerPartDetails() {
       quantity: p.quantity,
       dateCreated: p.datecreated ?? p.dateCreated,
       dateModified: p.datemodified ?? p.dateModified,
+      categories: normalizedCategories,
+      fitments: normalizedFitments,
     };
   }, [part]);
+
+  const renderYearRange = (start, end) => {
+    if (start == null && end == null) return "—";
+    if (start === end) return String(start);
+    return `${start}–${end}`;
+  };
 
   if (loading || !part) {
     return <div className="apd-skeleton" aria-busy="true" />;
@@ -126,7 +158,7 @@ function CustomerPartDetails() {
         </div>
       </header>
 
-      <section className="apd-grid">
+      <section className="apd-grid apd-grid--customer">
         <aside className="apd-card apd-media">
           {galleryMain ? (
             <img src={galleryMain} alt={vm.name} className="apd-photo" />
@@ -158,7 +190,7 @@ function CustomerPartDetails() {
             </div>
           )}
 
-          <div className="apd-dl">
+          <div className="apd-dl apd-dl--stack">
             <div>
               <dt>Price</dt>
               <dd>{vm.price}</dd>
@@ -167,6 +199,9 @@ function CustomerPartDetails() {
               <dt>In Stock</dt>
               <dd>{Number.isFinite(vm.quantity) ? vm.quantity : "—"}</dd>
             </div>
+          </div>
+
+          <div className="apd-actions">
             <button
               className="apd-btn"
               onClick={handleAdd}
@@ -185,7 +220,7 @@ function CustomerPartDetails() {
               <dd>{vm.partNumber || "—"}</dd>
             </div>
             <div>
-              <dt>Year</dt>
+              <dt>Primary Year</dt>
               <dd>{vm.year || "—"}</dd>
             </div>
             <div>
@@ -193,15 +228,15 @@ function CustomerPartDetails() {
               <dd>{vm.conditionName || "—"}</dd>
             </div>
             <div>
-              <dt>Category</dt>
+              <dt>Primary Category</dt>
               <dd>{vm.category || "—"}</dd>
             </div>
             <div>
-              <dt>Make</dt>
+              <dt>Primary Make</dt>
               <dd>{vm.company || "—"}</dd>
             </div>
             <div>
-              <dt>Model</dt>
+              <dt>Primary Model</dt>
               <dd>{vm.model || "—"}</dd>
             </div>
           </dl>
@@ -209,6 +244,55 @@ function CustomerPartDetails() {
           <div className="apd-desc">
             <h4>Description</h4>
             <p className="apd-text">{vm.description || "No description."}</p>
+          </div>
+        </article>
+
+        <article className="apd-card apd-relations">
+          <h3>Compatibility & Categories</h3>
+
+          <div className="apd-relations-section">
+            <h4>Categories</h4>
+            {vm.categories.length > 0 ? (
+              <div className="apd-chip-list">
+                {vm.categories.map((cat) => (
+                  <span
+                    key={cat.id || `${cat.catagoryId}-${cat.catagoryName}`}
+                    className="apd-chip"
+                  >
+                    {cat.catagoryName || `Category #${cat.catagoryId}`}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="apd-empty-note">No related categories.</div>
+            )}
+          </div>
+
+          <div className="apd-relations-section">
+            <h4>Compatibility</h4>
+            {vm.fitments.length > 0 ? (
+              <div className="apd-fitment-list">
+                {vm.fitments.map((fitment) => (
+                  <div
+                    key={
+                      fitment.id ||
+                      `${fitment.makeId}-${fitment.modelId}-${fitment.yearStart}-${fitment.yearEnd}`
+                    }
+                    className="apd-fitment-card"
+                  >
+                    <div className="apd-fitment-title">
+                      {fitment.company || "—"} {fitment.modelName || ""}
+                    </div>
+                    <div className="apd-subtle">
+                      Years:{" "}
+                      {renderYearRange(fitment.yearStart, fitment.yearEnd)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="apd-empty-note">No compatibility records.</div>
+            )}
           </div>
         </article>
       </section>

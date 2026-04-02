@@ -6,6 +6,7 @@ import "./AdminPartDetails.css";
 import "./add-item.css";
 
 import addItem from "../itemPhotos/add_item.png";
+import makeService from "../service/makeService";
 
 import MakeModelSelector from "./MakeModelSelector";
 import LocationSelector from "./LocationSelector";
@@ -25,10 +26,10 @@ const initialForm = {
   makeId: "",
   modelId: "",
   catagoryId: "",
-  conditionId: 1,
+  conditionId: "1",
   shippingPolicyId: "",
   locationId: "",
-  availableId: 1,
+  availableId: "1",
   otherBox: "",
 };
 
@@ -38,11 +39,14 @@ function AddItem() {
   const [catagoryOptions, setCatagoryOptions] = useState([]);
   const [conditionOptions, setConditionOptions] = useState([]);
   const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
+  const [makeOptions, setMakeOptions] = useState([]);
+
   const [formData, setFormData] = useState(initialForm);
+  const [extraCategories, setExtraCategories] = useState([]);
+  const [fitments, setFitments] = useState([]);
 
   const [galleryItems, setGalleryItems] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-
   const [submitting, setSubmitting] = useState(false);
 
   const galleryItemsRef = useRef([]);
@@ -56,6 +60,11 @@ function AddItem() {
       .getAllCatagories()
       .then((res) => setCatagoryOptions(res.item || []))
       .catch(() => toastr.error("Failed to load categories.", "Error"));
+
+    makeService
+      .getAllMakes()
+      .then((res) => setMakeOptions(res.item || []))
+      .catch(() => toastr.error("Failed to load makes.", "Error"));
 
     conditionService
       .getAllConditions()
@@ -89,6 +98,7 @@ function AddItem() {
   const requiredMissing = useMemo(() => {
     const required = [
       "name",
+      "year",
       "partNumber",
       "price",
       "catagoryId",
@@ -97,6 +107,7 @@ function AddItem() {
       "conditionId",
       "shippingPolicyId",
       "locationId",
+      "description",
     ];
 
     return required.filter((k) => !String(formData[k] ?? "").trim());
@@ -128,18 +139,53 @@ function AddItem() {
     }
   };
 
+  const addExtraCategory = () => {
+    setExtraCategories((prev) => [...prev, { catagoryId: "" }]);
+  };
+
+  const updateExtraCategory = (index, value) => {
+    setExtraCategories((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, catagoryId: value } : item,
+      ),
+    );
+  };
+
+  const removeExtraCategory = (index) => {
+    setExtraCategories((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addFitment = () => {
+    setFitments((prev) => [
+      ...prev,
+      {
+        makeId: "",
+        yearStart: "",
+        yearEnd: "",
+      },
+    ]);
+  };
+
+  const updateFitment = (index, field, value) => {
+    setFitments((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    );
+  };
+
+  const removeFitment = (index) => {
+    setFitments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const setGalleryFromDropZone = (files) => {
     setGalleryItems((prev) => {
       revokePreviewUrls(prev);
 
-      const nextItems = (files || []).map((file, index) => ({
+      return (files || []).map((file, index) => ({
         id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
         file,
         previewUrl: URL.createObjectURL(file),
         rotation: 0,
       }));
-
-      return nextItems;
     });
 
     setSelectedIndex(0);
@@ -162,24 +208,6 @@ function AddItem() {
         };
       }),
     );
-  };
-
-  const buildPayload = () => {
-    const payload = new FormData();
-
-    Object.entries(formData).forEach(([key, value]) => {
-      payload.append(
-        key,
-        typeof value === "boolean" ? value.toString() : String(value ?? ""),
-      );
-    });
-
-    payload.append(
-      "Image",
-      "/uploads/items/6c6d5554-56c0-4192-8cb9-b0aab5401100.jpg",
-    );
-
-    return payload;
   };
 
   const loadImageFromFile = (file) =>
@@ -264,6 +292,70 @@ function AddItem() {
     return rotatedFiles;
   };
 
+  const buildPayload = () => {
+    const payload = new FormData();
+
+    payload.append("Name", formData.name.trim());
+    payload.append("CatagoryId", formData.catagoryId);
+    payload.append("MakeId", formData.makeId);
+    payload.append("Year", formData.year.trim());
+    payload.append("ShippingPolicyId", formData.shippingPolicyId);
+    payload.append("PartNumber", formData.partNumber.trim());
+    payload.append("Description", formData.description.trim());
+    payload.append("Price", formData.price);
+    payload.append("Quantity", formData.quantity || "1");
+    payload.append("LocationId", formData.locationId);
+    payload.append("AvailableId", formData.availableId || "1");
+    payload.append("ConditionId", formData.conditionId);
+
+    if (String(formData.otherBox || "").trim()) {
+      payload.append("OtherBox", formData.otherBox.trim());
+    }
+
+    payload.append("Categories[0].CatagoryId", formData.catagoryId);
+
+    let categoryIndex = 1;
+    extraCategories.forEach((cat) => {
+      const catagoryId = String(cat.catagoryId || "").trim();
+
+      if (catagoryId) {
+        payload.append(`Categories[${categoryIndex}].CatagoryId`, catagoryId);
+        categoryIndex++;
+      }
+    });
+
+    const numericYear = parseInt(formData.year, 10);
+    let fitmentIndex = 0;
+
+    if (!Number.isNaN(numericYear) && String(formData.makeId || "").trim()) {
+      payload.append(
+        `Fitments[${fitmentIndex}].MakeId`,
+        String(formData.makeId),
+      );
+      payload.append(
+        `Fitments[${fitmentIndex}].YearStart`,
+        String(numericYear),
+      );
+      payload.append(`Fitments[${fitmentIndex}].YearEnd`, String(numericYear));
+      fitmentIndex++;
+    }
+
+    fitments.forEach((fitment) => {
+      const makeId = String(fitment.makeId || "").trim();
+      const yearStart = String(fitment.yearStart || "").trim();
+      const yearEnd = String(fitment.yearEnd || "").trim();
+
+      if (makeId && yearStart && yearEnd) {
+        payload.append(`Fitments[${fitmentIndex}].MakeId`, makeId);
+        payload.append(`Fitments[${fitmentIndex}].YearStart`, yearStart);
+        payload.append(`Fitments[${fitmentIndex}].YearEnd`, yearEnd);
+        fitmentIndex++;
+      }
+    });
+
+    return payload;
+  };
+
   const submitEvent = async (e) => {
     e?.preventDefault?.();
 
@@ -274,6 +366,16 @@ function AddItem() {
 
     if (requiredMissing.length > 0) {
       toastr.error(`Missing required fields: ${requiredMissing.join(", ")}`);
+      return;
+    }
+
+    if (Number(formData.price) <= 0) {
+      toastr.error("Price must be greater than 0.");
+      return;
+    }
+
+    if (Number(formData.quantity) < 0) {
+      toastr.error("Quantity cannot be negative.");
       return;
     }
 
@@ -328,7 +430,7 @@ function AddItem() {
         </div>
 
         <div className="apd-subtle">
-          Fill out Specs, Location, Meta, then submit.
+          Fill out Specs, Location, Compatibility & Categories, then submit.
         </div>
       </header>
 
@@ -352,7 +454,7 @@ function AddItem() {
                 disabled={submitting}
                 showUploadButton={false}
                 title="Add Photos (Drag & Drop or Click)"
-                helper="Primary image will be the first file (index 0)."
+                helper="Primary image will be the first file."
               />
             </div>
 
@@ -422,14 +524,6 @@ function AddItem() {
                 </div>
               </>
             )}
-
-            {galleryItems.length === 0 && (
-              <div className="apd-actions">
-                <button type="button" className="apd-btn" disabled>
-                  Download
-                </button>
-              </div>
-            )}
           </aside>
 
           <article className="apd-card apd-specs">
@@ -449,13 +543,14 @@ function AddItem() {
               </div>
 
               <div>
-                <dt>Year</dt>
+                <dt>Primary Year</dt>
                 <dd>
                   <input
                     name="year"
                     value={formData.year}
                     onChange={handleChange}
                     className="apd-input"
+                    placeholder="e.g. 1987"
                   />
                 </dd>
               </div>
@@ -537,7 +632,7 @@ function AddItem() {
               </div>
 
               <div>
-                <dt>Category</dt>
+                <dt>Primary Category</dt>
                 <dd>
                   <select
                     name="catagoryId"
@@ -579,6 +674,159 @@ function AddItem() {
             </div>
           </article>
 
+          <article className="apd-card apd-relations">
+            <h3>Compatibility & Categories</h3>
+
+            <div className="apd-relations-section">
+              <div className="apd-relations-header">
+                <h4>Additional Categories</h4>
+                <button
+                  type="button"
+                  className="apd-btn apd-btn--outlined apd-btn--sm"
+                  onClick={addExtraCategory}
+                  disabled={submitting}
+                >
+                  Add Category
+                </button>
+              </div>
+
+              <p className="apd-subtle">
+                Primary category is selected in Specs. Add any secondary
+                categories here.
+              </p>
+
+              {extraCategories.length === 0 ? (
+                <div className="apd-empty-note">
+                  No additional categories added.
+                </div>
+              ) : (
+                <div className="apd-repeater">
+                  {extraCategories.map((item, index) => {
+                    const takenIds = [
+                      String(formData.catagoryId || ""),
+                      ...extraCategories
+                        .map((x, i) =>
+                          i === index ? null : String(x.catagoryId || ""),
+                        )
+                        .filter(Boolean),
+                    ];
+
+                    return (
+                      <div
+                        key={`extra-cat-${index}`}
+                        className="apd-repeater-row"
+                      >
+                        <select
+                          className="apd-input"
+                          value={item.catagoryId}
+                          onChange={(e) =>
+                            updateExtraCategory(index, e.target.value)
+                          }
+                        >
+                          <option value="">Select Category</option>
+                          {catagoryOptions
+                            .filter((cat) => !takenIds.includes(String(cat.id)))
+                            .map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          className="apd-btn apd-btn--outlined apd-btn--sm"
+                          onClick={() => removeExtraCategory(index)}
+                          disabled={submitting}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="apd-relations-section">
+              <div className="apd-relations-header">
+                <h4>Additional Fitments</h4>
+                <button
+                  type="button"
+                  className="apd-btn apd-btn--outlined apd-btn--sm"
+                  onClick={addFitment}
+                  disabled={submitting}
+                >
+                  Add Fitment
+                </button>
+              </div>
+
+              <p className="apd-subtle">
+                The primary fitment comes from the Specs make/model and primary
+                year. Add cross-compatible makes and year ranges here.
+              </p>
+
+              {fitments.length === 0 ? (
+                <div className="apd-empty-note">
+                  No additional fitments added.
+                </div>
+              ) : (
+                <div className="apd-repeater">
+                  {fitments.map((fitment, index) => (
+                    <div key={`fitment-${index}`} className="apd-fitment-row">
+                      <select
+                        className="apd-input"
+                        value={fitment.makeId}
+                        onChange={(e) =>
+                          updateFitment(index, "makeId", e.target.value)
+                        }
+                      >
+                        <option value="">Select Make</option>
+                        {makeOptions
+                          .filter(
+                            (make) =>
+                              String(make.id) !== String(formData.makeId),
+                          )
+                          .map((make) => (
+                            <option key={make.id} value={make.id}>
+                              {make.company} - {make.model?.name}
+                            </option>
+                          ))}
+                      </select>
+
+                      <input
+                        className="apd-input"
+                        placeholder="Year Start"
+                        value={fitment.yearStart}
+                        onChange={(e) =>
+                          updateFitment(index, "yearStart", e.target.value)
+                        }
+                      />
+
+                      <input
+                        className="apd-input"
+                        placeholder="Year End"
+                        value={fitment.yearEnd}
+                        onChange={(e) =>
+                          updateFitment(index, "yearEnd", e.target.value)
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        className="apd-btn apd-btn--outlined apd-btn--sm"
+                        onClick={() => removeFitment(index)}
+                        disabled={submitting}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+
           <article className="apd-card apd-meta">
             <h3>Meta</h3>
 
@@ -592,9 +840,9 @@ function AddItem() {
                     onChange={handleChange}
                     className="apd-input"
                   >
-                    <option value={1}>Available</option>
-                    <option value={2}>Unavailable</option>
-                    <option value={3}>Pending</option>
+                    <option value="1">Available</option>
+                    <option value="2">Unavailable</option>
+                    <option value="3">Pending</option>
                   </select>
                 </dd>
               </div>
