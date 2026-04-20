@@ -2,37 +2,64 @@ import React, { useState, useEffect } from "react";
 import makeService from "../service/makeService";
 import modelService from "../service/modelService";
 
-function MakeModelSelector({ onSelectionChange }) {
+function MakeModelSelector({
+  onSelectionChange,
+  initialMakeId = "",
+  initialModelId = "",
+}) {
   const [makes, setMakes] = useState([]);
   const [models, setModels] = useState([]);
-  const [selectedMakeId, setSelectedMakeId] = useState("");
-  const [selectedModelId, setSelectedModelId] = useState("");
+  const [selectedMakeId, setSelectedMakeId] = useState(
+    String(initialMakeId || ""),
+  );
+  const [selectedModelId, setSelectedModelId] = useState(
+    String(initialModelId || ""),
+  );
 
   useEffect(() => {
     makeService.getAllCompanies().then((res) => {
-      setMakes(res.item);
+      setMakes(res.item || []);
     });
   }, []);
+
+  useEffect(() => {
+    setSelectedMakeId(String(initialMakeId || ""));
+  }, [initialMakeId]);
+
+  useEffect(() => {
+    setSelectedModelId(String(initialModelId || ""));
+  }, [initialModelId]);
+
+  useEffect(() => {
+    if (!selectedMakeId) {
+      setModels([]);
+      return;
+    }
+
+    modelService.getAllModelsByMakeId(selectedMakeId).then((res) => {
+      setModels(res.item || []);
+    });
+  }, [selectedMakeId]);
 
   const handleMakeChange = (e) => {
     const newMakeId = e.target.value;
     setSelectedMakeId(newMakeId);
-    setModels([]); // clear models on make change
-    setSelectedModelId(""); // reset model
+    setSelectedModelId("");
+    setModels([]);
 
     if (newMakeId) {
       modelService.getAllModelsByMakeId(newMakeId).then((res) => {
-        setModels(res.item);
+        setModels(res.item || []);
       });
     }
 
-    onSelectionChange({ makeId: newMakeId, modelId: "" });
+    onSelectionChange?.({ makeId: newMakeId, modelId: "" });
   };
 
   const handleModelChange = (e) => {
     const newModelId = e.target.value;
     setSelectedModelId(newModelId);
-    onSelectionChange({ makeId: selectedMakeId, modelId: newModelId });
+    onSelectionChange?.({ makeId: selectedMakeId, modelId: newModelId });
   };
 
   return (

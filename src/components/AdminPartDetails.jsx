@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import toastr from "toastr";
 import partsService from "../service/partsService";
 import availableService from "../service/availableService";
@@ -30,6 +30,12 @@ function AdminPartDetails() {
 
   const [locModalOpen, setLocModalOpen] = useState(false);
   const saveLockRef = useRef(false);
+
+  const navigate = useNavigate();
+
+  const handleSellSimilar = () => {
+    navigate(`/admin/add?sellSimilarId=${vm.id}`);
+  };
 
   const [edit, setEdit] = useState({
     price: false,
@@ -299,6 +305,17 @@ function AdminPartDetails() {
               {vm.availableStatus}
             </span>
           )}
+        </div>
+
+        <div className="apd-header-actions">
+          <button
+            type="button"
+            className="apd-btn apd-btn--outlined"
+            onClick={handleSellSimilar}
+            disabled={saving}
+          >
+            Sell Similar
+          </button>
         </div>
 
         <div className="apd-subtle">

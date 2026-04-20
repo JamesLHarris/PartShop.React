@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toastr from "toastr";
 
 import "./AdminPartDetails.css";
@@ -55,6 +55,12 @@ function AddItem() {
   const mainPreviewUrl = selectedItem?.previewUrl || addItem;
   const mainRotation = selectedItem?.rotation || 0;
 
+  const [searchParams] = useSearchParams();
+  const sellSimilarId = searchParams.get("sellSimilarId");
+
+  const [loadingClone, setLoadingClone] = useState(false);
+  const [initialLocationValue, setInitialLocationValue] = useState(null);
+
   useEffect(() => {
     catagoryService
       .getAllCatagories()
@@ -94,6 +100,47 @@ function AddItem() {
       revokePreviewUrls(galleryItemsRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!sellSimilarId) return;
+
+    let isMounted = true;
+    setLoadingClone(true);
+
+    Promise.all([
+      partsService.getPartById(sellSimilarId),
+      partsService
+        .getPartImagesByPartId(sellSimilarId)
+        .catch(() => ({ item: [] })),
+    ])
+      .then(([partRes, imageRes]) => {
+        if (!isMounted) return;
+
+        const sourcePart = partRes?.item;
+        const sourceImages = imageRes?.item || [];
+
+        if (!sourcePart) {
+          toastr.error("Could not load source part for Sell Similar.");
+          return;
+        }
+
+        hydrateFromSourcePart(sourcePart, sourceImages);
+        toastr.success("Listing prepopulated from source part.");
+      })
+      .catch((err) => {
+        console.error("Sell Similar load failed", err);
+        toastr.error("Failed to preload Sell Similar data.");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingClone(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sellSimilarId]);
 
   const requiredMissing = useMemo(() => {
     const required = [
@@ -174,6 +221,117 @@ function AddItem() {
 
   const removeFitment = (index) => {
     setFitments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const buildImageUrl = (img) => {
+    if (!img) return "";
+    if (/^https?:\/\//i.test(img)) return img;
+    return `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
+  };
+
+  const safeString = (value) => (value == null ? "" : String(value));
+
+  const hydrateFromSourcePart = (sourcePart, sourceImages = []) => {
+    if (!sourcePart) return;
+
+    const categories = Array.isArray(sourcePart.categories)
+      ? sourcePart.categories
+      : [];
+
+    const fitmentsRaw = Array.isArray(sourcePart.fitments)
+      ? sourcePart.fitments
+      : [];
+
+    const primaryCategoryId =
+      safeString(sourcePart.catagoryId) ||
+      safeString(categories[0]?.catagoryId);
+
+    const primaryFitment =
+      fitmentsRaw.find(
+        (f) =>
+          safeString(f.makeId) === safeString(sourcePart.makeId) &&
+          Number(f.yearStart) === Number(f.year) &&
+          Number(f.yearEnd) === Number(f.year),
+      ) || fitmentsRaw[0];
+
+    setFormData((prev) => ({
+      ...prev,
+      name: safeString(sourcePart.name),
+      year: safeString(sourcePart.year),
+      partNumber: safeString(sourcePart.partnumber ?? sourcePart.partNumber),
+      description: safeString(sourcePart.description),
+      price: safeString(sourcePart.price),
+      quantity: safeString(sourcePart.quantity ?? "1"),
+      makeId: safeString(sourcePart.makeId ?? primaryFitment?.makeId),
+      modelId: safeString(sourcePart.modelId ?? primaryFitment?.modelId),
+      catagoryId: primaryCategoryId,
+      conditionId: safeString(sourcePart.conditionId || "1"),
+      shippingPolicyId: safeString(sourcePart.shippingPolicyId),
+      locationId: safeString(sourcePart.locationId),
+      availableId: "1",
+      otherBox: safeString(sourcePart.otherBox ?? sourcePart.OtherBox),
+    }));
+
+    setExtraCategories(
+      categories
+        .filter((c) => safeString(c.catagoryId) !== primaryCategoryId)
+        .map((c) => ({
+          catagoryId: safeString(c.catagoryId),
+        })),
+    );
+
+    const normalizedPrimaryMakeId = safeString(sourcePart.makeId);
+    const normalizedPrimaryYear = safeString(sourcePart.year);
+
+    setFitments(
+      fitmentsRaw
+        .filter((f) => {
+          const samePrimary =
+            safeString(f.makeId) === normalizedPrimaryMakeId &&
+            safeString(f.yearStart) === normalizedPrimaryYear &&
+            safeString(f.yearEnd) === normalizedPrimaryYear;
+
+          return !samePrimary;
+        })
+        .map((f) => ({
+          makeId: safeString(f.makeId),
+          yearStart: safeString(f.yearStart),
+          yearEnd: safeString(f.yearEnd),
+        })),
+    );
+
+    setInitialLocationValue({
+      siteId: sourcePart.siteId ?? sourcePart.location?.site?.id ?? "",
+      areaId: sourcePart.areaId ?? sourcePart.location?.area?.id ?? "",
+      aisleId: sourcePart.aisleId ?? sourcePart.location?.aisle?.id ?? "",
+      shelfId: sourcePart.shelfId ?? sourcePart.location?.shelf?.id ?? "",
+      sectionId: sourcePart.sectionId ?? sourcePart.location?.section?.id ?? "",
+      boxId: sourcePart.boxId ?? sourcePart.location?.box?.id ?? "",
+    });
+
+    if (sourceImages.length > 0) {
+      setGalleryItems(
+        sourceImages.map((img, index) => ({
+          id: `existing-${img.id || index}`,
+          file: null,
+          previewUrl: buildImageUrl(img.url),
+          rotation: 0,
+          isExisting: true,
+        })),
+      );
+      setSelectedIndex(0);
+    } else if (sourcePart.image) {
+      setGalleryItems([
+        {
+          id: `existing-primary-${sourcePart.id}`,
+          file: null,
+          previewUrl: buildImageUrl(sourcePart.image),
+          rotation: 0,
+          isExisting: true,
+        },
+      ]);
+      setSelectedIndex(0);
+    }
   };
 
   const setGalleryFromDropZone = (files) => {
@@ -285,6 +443,10 @@ function AddItem() {
     const rotatedFiles = [];
 
     for (const item of items) {
+      if (!item?.file) {
+        continue;
+      }
+
       const rotatedFile = await rotateFile(item.file, item.rotation);
       rotatedFiles.push(rotatedFile);
     }
@@ -359,7 +521,9 @@ function AddItem() {
   const submitEvent = async (e) => {
     e?.preventDefault?.();
 
-    if (galleryItems.length === 0) {
+    const hasAnyImage = galleryItems.some((item) => item?.previewUrl);
+
+    if (!hasAnyImage) {
       toastr.error("At least one image is required.");
       return;
     }
@@ -392,7 +556,10 @@ function AddItem() {
       }
 
       const rotatedFiles = await buildRotatedFilesForUpload(galleryItems);
-      await partsService.addPartImages(newId, rotatedFiles);
+
+      if (rotatedFiles.length > 0) {
+        await partsService.addPartImages(newId, rotatedFiles);
+      }
 
       toastr.success("Part added successfully!");
       navigate("/admin");
@@ -414,8 +581,10 @@ function AddItem() {
     <div className="admin-part-details apd-add">
       <header className="apd-header">
         <div className="apd-title">
-          <h2>Add Part</h2>
-          <span className="apd-badge apd-badge--pending">Draft</span>
+          <h2>{sellSimilarId ? "Sell Similar" : "Add Part"}</h2>
+          <span className="apd-badge apd-badge--pending">
+            {sellSimilarId ? "Cloned Draft" : "Draft"}
+          </span>
         </div>
 
         <div className="apd-header-actions">
@@ -654,6 +823,8 @@ function AddItem() {
                 <dd className="apd-form-wide-dd">
                   <MakeModelSelector
                     onSelectionChange={handleMakeModelChange}
+                    initialMakeId={formData.makeId}
+                    initialModelId={formData.modelId}
                   />
                 </dd>
               </div>
@@ -664,7 +835,10 @@ function AddItem() {
             <h3>Location</h3>
 
             <div className="apd-location-picker">
-              <LocationSelector onChange={handleLocationChange} />
+              <LocationSelector
+                onChange={handleLocationChange}
+                initialValue={initialLocationValue}
+              />
             </div>
 
             <div className="apd-actions">
