@@ -13,6 +13,7 @@ function LocationSelector({ onChange, initialValue = null }) {
     shelfId: "",
     sectionId: "",
     boxId: "",
+    locationId: "",
   });
 
   useEffect(() => {
@@ -28,6 +29,7 @@ function LocationSelector({ onChange, initialValue = null }) {
         shelfId: String(initialValue.shelfId || ""),
         sectionId: String(initialValue.sectionId || ""),
         boxId: String(initialValue.boxId || ""),
+        locationId: String(initialValue.locationId || ""),
       });
     }
   }, [initialValue]);
@@ -44,13 +46,43 @@ function LocationSelector({ onChange, initialValue = null }) {
     }
   }, [selected.siteId]);
 
+  const resolveLocationId = (state) => {
+    const match = hierarchy.find((row) => {
+      return (
+        String(row.locationId || row.location?.id || "") ===
+          String(state.locationId || "") ||
+        (String(row.siteId || row.site?.id || "") ===
+          String(state.siteId || "") &&
+          String(row.areaId || row.area?.id || "") ===
+            String(state.areaId || "") &&
+          String(row.aisleId || row.aisle?.id || "") ===
+            String(state.aisleId || "") &&
+          String(row.shelfId || row.shelf?.id || "") ===
+            String(state.shelfId || "") &&
+          String(row.sectionId || row.section?.id || "") ===
+            String(state.sectionId || "") &&
+          String(row.boxId || row.box?.id || "") === String(state.boxId || ""))
+      );
+    });
+
+    return String(match?.locationId || match?.location?.id || "");
+  };
+
   const updateSelection = (field, value) => {
     const resetBelow = {
-      siteId: ["areaId", "aisleId", "shelfId", "sectionId", "boxId"],
-      areaId: ["aisleId", "shelfId", "sectionId", "boxId"],
-      aisleId: ["shelfId", "sectionId", "boxId"],
-      shelfId: ["sectionId", "boxId"],
-      sectionId: ["boxId"],
+      siteId: [
+        "areaId",
+        "aisleId",
+        "shelfId",
+        "sectionId",
+        "boxId",
+        "locationId",
+      ],
+      areaId: ["aisleId", "shelfId", "sectionId", "boxId", "locationId"],
+      aisleId: ["shelfId", "sectionId", "boxId", "locationId"],
+      shelfId: ["sectionId", "boxId", "locationId"],
+      sectionId: ["boxId", "locationId"],
+      boxId: ["locationId"],
     };
 
     setSelected((prev) => {
@@ -60,6 +92,10 @@ function LocationSelector({ onChange, initialValue = null }) {
         resetBelow[field].forEach((key) => {
           updated[key] = "";
         });
+      }
+
+      if (field === "boxId" && value) {
+        updated.locationId = resolveLocationId(updated);
       }
 
       onChange?.(updated);
@@ -73,7 +109,22 @@ function LocationSelector({ onChange, initialValue = null }) {
     return hierarchy
       .filter(filterFn)
       .map((row) => {
-        const node = row[key];
+        const node =
+          row[key] ||
+          (key === "site"
+            ? { id: row.siteId, name: row.siteName }
+            : key === "area"
+              ? { id: row.areaId, name: row.areaName }
+              : key === "aisle"
+                ? { id: row.aisleId, name: row.aisleName }
+                : key === "shelf"
+                  ? { id: row.shelfId, name: row.shelfName }
+                  : key === "section"
+                    ? { id: row.sectionId, name: row.sectionName }
+                    : key === "box"
+                      ? { id: row.boxId, name: row.boxName }
+                      : null);
+
         return {
           id: node?.id,
           name: node?.name,
@@ -106,7 +157,9 @@ function LocationSelector({ onChange, initialValue = null }) {
           >
             <option value="">Select Area</option>
             {uniqueOptions(
-              (row) => row.site?.id === parseInt(selected.siteId, 10),
+              (row) =>
+                String(row.siteId || row.site?.id || "") ===
+                String(selected.siteId),
               "area",
             ).map((a) => (
               <option key={a.id} value={a.id}>
@@ -126,7 +179,9 @@ function LocationSelector({ onChange, initialValue = null }) {
           >
             <option value="">Select Aisle</option>
             {uniqueOptions(
-              (row) => row.area?.id === parseInt(selected.areaId, 10),
+              (row) =>
+                String(row.areaId || row.area?.id || "") ===
+                String(selected.areaId),
               "aisle",
             ).map((a) => (
               <option key={a.id} value={a.id}>
@@ -146,7 +201,9 @@ function LocationSelector({ onChange, initialValue = null }) {
           >
             <option value="">Select Shelf</option>
             {uniqueOptions(
-              (row) => row.aisle?.id === parseInt(selected.aisleId, 10),
+              (row) =>
+                String(row.aisleId || row.aisle?.id || "") ===
+                String(selected.aisleId),
               "shelf",
             ).map((s) => (
               <option key={s.id} value={s.id}>
@@ -166,7 +223,9 @@ function LocationSelector({ onChange, initialValue = null }) {
           >
             <option value="">Select Section</option>
             {uniqueOptions(
-              (row) => row.shelf?.id === parseInt(selected.shelfId, 10),
+              (row) =>
+                String(row.shelfId || row.shelf?.id || "") ===
+                String(selected.shelfId),
               "section",
             ).map((s) => (
               <option key={s.id} value={s.id}>
@@ -186,7 +245,9 @@ function LocationSelector({ onChange, initialValue = null }) {
           >
             <option value="">Select Box</option>
             {uniqueOptions(
-              (row) => row.section?.id === parseInt(selected.sectionId, 10),
+              (row) =>
+                String(row.sectionId || row.section?.id || "") ===
+                String(selected.sectionId),
               "box",
             ).map((b) => (
               <option key={b.id} value={b.id}>

@@ -13,6 +13,7 @@ import AdminOrders from "./components/AdminOrders";
 import AdminPartDetails from "./components/AdminPartDetails";
 import CustomerPartDetails from "./components/CustomerPartDetails";
 import { CartProvider } from "./components/CartContext";
+import AdminRefunds from "./components/AdminRefunds";
 import Home from "./components/Home";
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
             <Route path="/Admin/Orders" element={<AdminOrders />} />
             <Route path="/admin/part/:id" element={<AdminPartDetails />} />
             <Route path="/browse/part/:id" element={<CustomerPartDetails />} />
+            <Route path="/admin/refunds" element={<AdminRefunds />} />
           </Route>
 
           {/* Only routes that shouldn't show header (e.g., Login) go outside */}

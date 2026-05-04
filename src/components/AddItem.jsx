@@ -178,10 +178,10 @@ function AddItem() {
   };
 
   const handleLocationChange = (loc) => {
-    if (loc?.boxId) {
+    if (loc?.locationId) {
       setFormData((prev) => ({
         ...prev,
-        locationId: String(parseInt(loc.boxId, 10)),
+        locationId: String(loc.locationId),
       }));
     }
   };
@@ -843,7 +843,7 @@ function AddItem() {
 
             <div className="apd-actions">
               <span className="apd-subtle">
-                Selected Box ID: {formData.locationId || "—"}
+                Selected Location ID: {formData.locationId || "—"}
               </span>
             </div>
           </article>

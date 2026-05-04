@@ -2,9 +2,9 @@ import React from "react";
 import { Card } from "react-bootstrap";
 import "./admin-actions.css";
 import addItem from "../itemPhotos/add_item.png";
-import moveItem from "../itemPhotos/move_item.jpg";
 import findItem from "../itemPhotos/find-icon.jpg";
 import editItem from "../itemPhotos/edit_item.png";
+import moveItem from "../itemPhotos/move_item.jpg";
 import { useNavigate } from "react-router-dom";
 
 function AdminActions() {
@@ -15,9 +15,9 @@ function AdminActions() {
     console.log("Admin Add");
   };
 
-  const movePart = () => {
-    // Placeholder handler
-    console.log("Admin Move");
+  const refundRequests = () => {
+    navigate("/admin/refunds");
+    console.log("Admin Refund Requests");
   };
 
   const locatePart = () => {
@@ -43,29 +43,31 @@ function AdminActions() {
           </Card.Body>
           <Card.Footer>
             <p className="admin-footer">Add New Part</p>
-            <button className="admin-button " onClick={addPart}>
+            <button className="admin-button" onClick={addPart}>
               Add
             </button>
           </Card.Footer>
         </Card>
       </div>
+
       <div className="admin-action">
         <Card className="action-2">
           <Card.Body>
             <Card.Title>
-              <img src={moveItem} className="action-image" alt="move" />
+              <img src={moveItem} className="action-image" alt="refunds" />
             </Card.Title>
             <Card.Text></Card.Text>
             <hr className="admin-divider" />
           </Card.Body>
           <Card.Footer>
-            <p className="admin-footer">Move Part</p>
-            <button className="admin-button " onClick={movePart}>
-              Move
+            <p className="admin-footer">Refund Requests</p>
+            <button className="admin-button" onClick={refundRequests}>
+              Review
             </button>
           </Card.Footer>
         </Card>
       </div>
+
       <div className="admin-action">
         <Card className="action-3">
           <Card.Body>
@@ -77,24 +79,25 @@ function AdminActions() {
           </Card.Body>
           <Card.Footer>
             <p className="admin-footer">Locate Part</p>
-            <button className="admin-button " onClick={locatePart}>
+            <button className="admin-button" onClick={locatePart}>
               Locate
             </button>
           </Card.Footer>
         </Card>
       </div>
+
       <div className="admin-action">
         <Card className="action-4">
           <Card.Body>
             <Card.Title>
-              <img src={editItem} className="action-image" alt="edit" />
+              <img src={editItem} className="action-image" alt="orders" />
             </Card.Title>
             <Card.Text></Card.Text>
             <hr className="admin-divider" />
           </Card.Body>
           <Card.Footer>
             <p className="admin-footer">Orders</p>
-            <button className="admin-button " onClick={partOrders}>
+            <button className="admin-button" onClick={partOrders}>
               Edit
             </button>
           </Card.Footer>
