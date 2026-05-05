@@ -46,26 +46,29 @@ function LocationSelector({ onChange, initialValue = null }) {
     }
   }, [selected.siteId]);
 
+  const getId = (row, flatKey, nestedKey) =>
+    String(row?.[flatKey] ?? row?.[nestedKey]?.id ?? "");
+
   const resolveLocationId = (state) => {
     const match = hierarchy.find((row) => {
       return (
-        String(row.locationId || row.location?.id || "") ===
-          String(state.locationId || "") ||
-        (String(row.siteId || row.site?.id || "") ===
-          String(state.siteId || "") &&
-          String(row.areaId || row.area?.id || "") ===
-            String(state.areaId || "") &&
-          String(row.aisleId || row.aisle?.id || "") ===
-            String(state.aisleId || "") &&
-          String(row.shelfId || row.shelf?.id || "") ===
-            String(state.shelfId || "") &&
-          String(row.sectionId || row.section?.id || "") ===
-            String(state.sectionId || "") &&
-          String(row.boxId || row.box?.id || "") === String(state.boxId || ""))
+        getId(row, "siteId", "site") === String(state.siteId || "") &&
+        getId(row, "areaId", "area") === String(state.areaId || "") &&
+        getId(row, "aisleId", "aisle") === String(state.aisleId || "") &&
+        getId(row, "shelfId", "shelf") === String(state.shelfId || "") &&
+        getId(row, "sectionId", "section") === String(state.sectionId || "") &&
+        getId(row, "boxId", "box") === String(state.boxId || "")
       );
     });
 
-    return String(match?.locationId || match?.location?.id || "");
+    return String(
+      match?.locationId ??
+        match?.LocationId ??
+        match?.id ??
+        match?.Id ??
+        match?.location?.id ??
+        "",
+    );
   };
 
   const updateSelection = (field, value) => {

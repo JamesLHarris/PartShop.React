@@ -179,12 +179,10 @@ function AddItem() {
   };
 
   const handleLocationChange = (loc) => {
-    if (loc?.locationId) {
-      setFormData((prev) => ({
-        ...prev,
-        locationId: String(loc.locationId),
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      locationId: loc?.locationId ? String(loc.locationId) : "",
+    }));
   };
 
   const addExtraCategory = () => {
