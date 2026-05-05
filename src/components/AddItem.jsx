@@ -31,6 +31,7 @@ const initialForm = {
   locationId: "",
   availableId: "1",
   otherBox: "",
+  adminNotes: "",
 };
 
 function AddItem() {
@@ -270,6 +271,7 @@ function AddItem() {
       locationId: safeString(sourcePart.locationId),
       availableId: "1",
       otherBox: safeString(sourcePart.otherBox ?? sourcePart.OtherBox),
+      adminNotes: safeString(sourcePart.adminNotes ?? sourcePart.AdminNotes),
     }));
 
     setExtraCategories(
@@ -474,6 +476,10 @@ function AddItem() {
       payload.append("OtherBox", formData.otherBox.trim());
     }
 
+    if (String(formData.adminNotes || "").trim()) {
+      payload.append("AdminNotes", formData.adminNotes.trim());
+    }
+
     payload.append("Categories[0].CatagoryId", formData.catagoryId);
 
     let categoryIndex = 1;
@@ -562,7 +568,7 @@ function AddItem() {
       }
 
       toastr.success("Part added successfully!");
-      navigate("/admin");
+      navigate(`/admin/part/${newId}`);
     } catch (err) {
       console.error("Submission failed", err);
 
@@ -1043,6 +1049,19 @@ function AddItem() {
                 className="apd-textarea"
                 rows={5}
               />
+            </div>
+            <div>
+              <dt>Admin Notes</dt>
+              <dd>
+                <textarea
+                  name="adminNotes"
+                  value={formData.adminNotes}
+                  onChange={handleChange}
+                  className="apd-textarea"
+                  rows={4}
+                  placeholder="Internal admin-only notes. Not visible to customers."
+                />
+              </dd>
             </div>
           </article>
         </form>

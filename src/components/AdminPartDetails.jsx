@@ -43,6 +43,7 @@ function AdminPartDetails() {
     availability: false,
     desc: false,
     otherBox: false,
+    adminNotes: false,
     condition: false,
     shippingPolicy: false,
   });
@@ -206,6 +207,7 @@ function AdminPartDetails() {
       section: p.sectionName ?? get(p, "location", "section", "name"),
       box: p.boxName ?? get(p, "location", "box", "name"),
       otherBox: p.otherBox ?? p.OtherBox ?? p.other_box,
+      adminNotes: p.adminNotes ?? p.AdminNotes ?? "",
 
       price: p.price,
       quantity: p.quantity,
@@ -258,6 +260,7 @@ function AdminPartDetails() {
         availability: false,
         desc: false,
         otherBox: false,
+        adminNotes: false,
         condition: false,
         shippingPolicy: false,
       });
@@ -781,6 +784,34 @@ function AdminPartDetails() {
                     onClick={() => setEdit((e) => ({ ...e, desc: true }))}
                   >
                     Change Description
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="apd-desc">
+              <h4>Admin Notes</h4>
+              {edit.adminNotes ? (
+                <InLineText
+                  value={vm.adminNotes || ""}
+                  disabled={saving}
+                  onSubmit={(text) =>
+                    patchAndRefresh({ adminNotes: text || null })
+                  }
+                  onCancel={() => setEdit((e) => ({ ...e, adminNotes: false }))}
+                />
+              ) : (
+                <>
+                  <p className="apd-text">
+                    {vm.adminNotes || "No admin notes."}
+                  </p>
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined apd-btn--sm"
+                    disabled={saving}
+                    onClick={() => setEdit((e) => ({ ...e, adminNotes: true }))}
+                  >
+                    Change Admin Notes
                   </button>
                 </>
               )}
