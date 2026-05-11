@@ -1,0 +1,144 @@
+.contact-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+.contact-hero {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.contact-hero h1 {
+  margin: 0 0 10px;
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+.contact-hero p {
+  margin: 0;
+  font-size: 1rem;
+  color: #555;
+}
+
+.contact-content {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.9fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.contact-form,
+.contact-info-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.contact-form {
+  padding: 24px;
+}
+
+.contact-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.contact-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.contact-form-group label {
+  margin-bottom: 7px;
+  font-weight: 600;
+  color: #222;
+}
+
+.contact-form-group input,
+.contact-form-group select,
+.contact-form-group textarea {
+  width: 100%;
+  border: 1px solid #cfcfcf;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 1rem;
+  outline: none;
+  background: #fff;
+}
+
+.contact-form-group input:focus,
+.contact-form-group select:focus,
+.contact-form-group textarea:focus {
+  border-color: #555;
+}
+
+.contact-form-group textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.contact-submit-button {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 18px;
+  font-weight: 700;
+  background: #1613d4;
+  color: #fff;
+  cursor: pointer;
+}
+
+.contact-submit-button:hover:not(:disabled) {
+  background: #2381c0;
+}
+
+.contact-submit-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.contact-info-card {
+  padding: 24px;
+}
+
+.contact-info-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+}
+
+.contact-info-card p {
+  margin-bottom: 22px;
+  color: #555;
+}
+
+.contact-info-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-top: 1px solid #eee;
+}
+
+.contact-info-line strong {
+  color: #222;
+}
+
+.contact-info-line span {
+  color: #555;
+}
+
+@media (max-width: 850px) {
+  .contact-content {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
