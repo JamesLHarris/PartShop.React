@@ -7,6 +7,19 @@ import {
 
 const endpoint = `${API_HOST_PREFIX}/api/refunds`;
 
+const scrubParams = (params) => {
+  const clean = { ...params };
+
+  Object.keys(clean).forEach((key) => {
+    const value = clean[key];
+    if (value === "" || value === null || value === undefined) {
+      delete clean[key];
+    }
+  });
+
+  return clean;
+};
+
 const addRefundRequest = (payload) => {
   const config = {
     method: "POST",
@@ -33,23 +46,34 @@ const getRefundRequestById = (id) => {
 };
 
 const getRefundRequestsPaginated = (pageIndex, pageSize, filters = {}) => {
-  const params = {
-    pageIndex,
-    pageSize,
-    ...filters,
-  };
-
-  Object.keys(params).forEach((key) => {
-    const value = params[key];
-    if (value === "" || value === null || value === undefined) {
-      delete params[key];
-    }
-  });
-
   const config = {
     method: "GET",
     url: `${endpoint}/paginate`,
-    params,
+    params: scrubParams({ pageIndex, pageSize, ...filters }),
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const getReturnReasons = () => {
+  const config = {
+    method: "GET",
+    url: `${endpoint}/reasons`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const getReturnStatuses = () => {
+  const config = {
+    method: "GET",
+    url: `${endpoint}/statuses`,
     withCredentials: true,
     crossdomain: true,
     headers: { "Content-Type": "application/json" },
@@ -71,10 +95,27 @@ const updateRefundRequestStatus = (id, payload) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+
+const submitCustomerReturnRequest = (formData) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/customer-submit`,
+    data: formData,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "multipart/form-data" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
 const refundRequestsService = {
+  submitCustomerReturnRequest,
   addRefundRequest,
   getRefundRequestById,
   getRefundRequestsPaginated,
+  getReturnReasons,
+  getReturnStatuses,
   updateRefundRequestStatus,
 };
 

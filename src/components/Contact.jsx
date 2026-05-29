@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import toastr from "toastr";
 import contactService from "../service/contactService";
 import "./Contact.css";
@@ -200,6 +201,18 @@ function Contact() {
         </form>
 
         <aside className="contact-info-card">
+          <div className="contact-return-card">
+            <h2>Need to request a return?</h2>
+            <p>
+              Start a return request here. You will be able to enter your order
+              information, select a return reason, and upload proof photos if
+              required.
+            </p>
+
+            <Link className="contact-return-link" to="/returns/request">
+              Start Return Request
+            </Link>
+          </div>
           <h2>Company Contact</h2>
           <p>
             Choose the best inquiry type and your message will be routed to the

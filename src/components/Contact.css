@@ -142,3 +142,39 @@
     gap: 0;
   }
 }
+
+.contact-return-card {
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.contact-return-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+}
+
+.contact-return-card p {
+  margin: 0 0 16px;
+  color: #555;
+}
+
+.contact-return-link {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #1613d4;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.contact-return-link:hover {
+  background: #2381c0;
+  color: #fff;
+  text-decoration: none;
+}
