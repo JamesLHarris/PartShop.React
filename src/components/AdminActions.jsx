@@ -20,6 +20,11 @@ function AdminActions() {
     console.log("Admin Refund Requests");
   };
 
+  const discounts = () => {
+    navigate("/admin/discounts");
+    console.log("Admin Discounts");
+  };
+
   const locatePart = () => {
     navigate("Search");
     console.log("Admin Locate");
@@ -70,6 +75,24 @@ function AdminActions() {
 
       <div className="admin-action">
         <Card className="action-3">
+          <Card.Body>
+            <Card.Title>
+              <img src={editItem} className="action-image" alt="discounts" />
+            </Card.Title>
+            <Card.Text></Card.Text>
+            <hr className="admin-divider" />
+          </Card.Body>
+          <Card.Footer>
+            <p className="admin-footer">Discount Codes</p>
+            <button className="admin-button" onClick={discounts}>
+              Manage
+            </button>
+          </Card.Footer>
+        </Card>
+      </div>
+
+      <div className="admin-action">
+        <Card className="action-4">
           <Card.Body>
             <Card.Title>
               <img src={findItem} className="action-image" alt="find" />
