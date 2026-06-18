@@ -526,3 +526,34 @@
     grid-template-columns: 1fr;
   }
 }
+
+.admin-part-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.admin-part-header-left {
+  min-width: 0;
+}
+
+.admin-part-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.admin-part-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-part-actions .btn {
+  white-space: nowrap;
+}

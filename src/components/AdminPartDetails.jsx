@@ -23,6 +23,10 @@ function AdminPartDetails() {
   const [conditionOptions, setConditionOptions] = useState([]);
   const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
   const [availabilityOptions, setAvailabilityOptions] = useState([]);
+  const [isPublishingShopify, setIsPublishingShopify] = useState(false);
+  const [isUnpublishingShopify, setIsUnpublishingShopify] = useState(false);
+  const [shopifyPublishMessage, setShopifyPublishMessage] = useState("");
+  const [shopifyPublishError, setShopifyPublishError] = useState("");
 
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
@@ -109,6 +113,89 @@ function AdminPartDetails() {
     refreshImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const onPublishToShopifyClicked = () => {
+    if (!part?.id) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Publish this part to Shopify? This will make the Shopify product active.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsPublishingShopify(true);
+    setShopifyPublishMessage("");
+    setShopifyPublishError("");
+
+    partsService
+      .publishShopifyProduct(part.id)
+      .then((response) => {
+        const result = response.data.item;
+
+        setShopifyPublishMessage(
+          `Published to Shopify. Status: ${result.status || "ACTIVE"}`,
+        );
+
+        // Optional: reload details so any UI state refreshes.
+        // getPartById(part.id);
+      })
+      .catch((error) => {
+        const message =
+          error?.response?.data?.errors?.[0] ||
+          error?.response?.data?.message ||
+          error.message ||
+          "Unable to publish to Shopify.";
+
+        setShopifyPublishError(message);
+      })
+      .finally(() => {
+        setIsPublishingShopify(false);
+      });
+  };
+
+  const onUnpublishFromShopifyClicked = () => {
+    if (!part?.id) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Unpublish this part from Shopify? This will move the Shopify product back to Draft.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsUnpublishingShopify(true);
+    setShopifyPublishMessage("");
+    setShopifyPublishError("");
+
+    partsService
+      .unpublishShopifyProduct(part.id)
+      .then((response) => {
+        const result = response.data.item;
+
+        setShopifyPublishMessage(
+          `Unpublished from Shopify. Status: ${result.status || "DRAFT"}`,
+        );
+      })
+      .catch((error) => {
+        const message =
+          error?.response?.data?.errors?.[0] ||
+          error?.response?.data?.message ||
+          error.message ||
+          "Unable to unpublish from Shopify.";
+
+        setShopifyPublishError(message);
+      })
+      .finally(() => {
+        setIsUnpublishingShopify(false);
+      });
+  };
 
   useEffect(() => {
     availableService
@@ -310,12 +397,31 @@ function AdminPartDetails() {
           )}
         </div>
 
-        <div className="apd-header-actions">
+        <div className="admin-part-actions">
           <button
             type="button"
-            className="apd-btn apd-btn--outlined"
+            className="btn btn-primary"
+            onClick={onPublishToShopifyClicked}
+            disabled={isPublishingShopify || !part?.shopifyProductId}
+          >
+            {isPublishingShopify ? "Publishing..." : "Publish to Shopify"}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-warning"
+            onClick={onUnpublishFromShopifyClicked}
+            disabled={isUnpublishingShopify || !part?.shopifyProductId}
+          >
+            {isUnpublishingShopify
+              ? "Unpublishing..."
+              : "Unpublish from Shopify"}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-outline-light"
             onClick={handleSellSimilar}
-            disabled={saving}
           >
             Sell Similar
           </button>

@@ -160,6 +160,30 @@ const customerSearch = (params = {}) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+const publishShopifyProduct = (partId) => {
+  const config = {
+    method: "POST",
+    url: `${homeEndpoint}/${partId}/shopify/publish`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config);
+};
+
+const unpublishShopifyProduct = (partId) => {
+  const config = {
+    method: "POST",
+    url: `${homeEndpoint}/${partId}/shopify/unpublish`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config);
+};
+
 const partsService = {
   deletePart,
   addPart,
@@ -174,6 +198,8 @@ const partsService = {
   addPartImages,
   getByCategoryCustomer,
   getByModelCustomer,
+  publishShopifyProduct,
+  unpublishShopifyProduct,
   partImageUrl,
 };
 
