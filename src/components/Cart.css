@@ -184,3 +184,9 @@
   color: #eaeaea;
   text-align: center;
 }
+/* Step 4 checkout flow additions */
+.cart-line__stock {
+  font-size: 0.8rem;
+  color: #b8b8b8;
+  margin-right: 10px;
+}

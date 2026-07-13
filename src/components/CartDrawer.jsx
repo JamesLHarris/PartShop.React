@@ -1,7 +1,7 @@
 import { useCart } from ".//CartContext";
 import "./Cart.css";
 
-function CartDrawer({ open, onClose, onCheckout }) {
+function CartDrawer({ open, onClose, onCheckout, isCheckingOut = false }) {
   const { items, updateQty, remove, subtotal, clear } = useCart();
   if (!open) return null;
 
@@ -51,6 +51,9 @@ function CartDrawer({ open, onClose, onCheckout }) {
                       +
                     </button>
                   </div>
+                  {it.maxQuantity && (
+                    <span className="cart-line__stock">Max: {it.maxQuantity}</span>
+                  )}
                   <button className="link" onClick={() => remove(it.id)}>
                     Remove
                   </button>
@@ -79,9 +82,9 @@ function CartDrawer({ open, onClose, onCheckout }) {
             <button
               className="btn btn-primary"
               onClick={onCheckout}
-              disabled={items.length === 0}
+              disabled={items.length === 0 || isCheckingOut}
             >
-              Checkout
+              {isCheckingOut ? "Starting..." : "Checkout"}
             </button>
           </div>
         </footer>

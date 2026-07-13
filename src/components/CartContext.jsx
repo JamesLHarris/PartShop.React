@@ -35,12 +35,24 @@ export function CartProvider({ children }) {
     const unitPrice = Number(
       payload.unitPrice ?? payload.price ?? payload.Price ?? 0
     );
+    const maxQuantityRaw = Number(
+      payload.maxQuantity ?? payload.quantityAvailable ?? payload.QuantityAvailable ?? 0
+    );
+    const maxQuantity = Number.isFinite(maxQuantityRaw) && maxQuantityRaw > 0 ? maxQuantityRaw : null;
 
     setItems((prev) => {
       const next = [...prev];
       const i = next.findIndex((x) => x.id === id);
-      if (i >= 0) next[i] = { ...next[i], qty: next[i].qty + qty };
-      else next.push({ id, name, image, unitPrice, qty: Math.max(1, qty) });
+      if (i >= 0) {
+        const existingMax = next[i].maxQuantity || maxQuantity;
+        const desiredQty = (next[i].qty || 0) + qty;
+        next[i] = {
+          ...next[i],
+          maxQuantity: existingMax,
+          qty: existingMax ? Math.min(desiredQty, existingMax) : desiredQty,
+        };
+      }
+      else next.push({ id, name, image, unitPrice, maxQuantity, qty: maxQuantity ? Math.min(Math.max(1, qty), maxQuantity) : Math.max(1, qty) });
       return next;
     });
   };
@@ -49,9 +61,16 @@ export function CartProvider({ children }) {
   const updateQty = (id, qty) => {
     setItems((prev) =>
       prev
-        .map((x) =>
-          x.id === id ? { ...x, qty: Math.max(0, Number(qty) || 0) } : x
-        )
+        .map((x) => {
+          if (x.id !== id) return x;
+
+          const desiredQty = Math.max(0, Number(qty) || 0);
+          const cappedQty = x.maxQuantity
+            ? Math.min(desiredQty, x.maxQuantity)
+            : desiredQty;
+
+          return { ...x, qty: cappedQty };
+        })
         .filter((x) => x.qty > 0)
     );
   };

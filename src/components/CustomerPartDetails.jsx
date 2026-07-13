@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import partsService from "../service/partsService";
+import shopifyCheckoutService from "../service/shopifyCheckoutService";
 import "./AdminPartDetails.css";
 import { useCart } from "./CartContext";
 
@@ -23,6 +24,8 @@ function CustomerPartDetails() {
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -102,6 +105,9 @@ function CustomerPartDetails() {
       description: p.description,
       image: buildImageUrl(p.image),
       quantity: p.quantity,
+      canCheckout:
+        (p.availableStatus ?? get(p, "available", "status")) === "Available" &&
+        Number(p.quantity) > 0,
       dateCreated: p.datecreated ?? p.dateCreated,
       dateModified: p.datemodified ?? p.dateModified,
       categories: normalizedCategories,
@@ -121,6 +127,26 @@ function CustomerPartDetails() {
 
   const galleryMain = activeImage || vm.image;
 
+  const handleBuyNow = async () => {
+    setCheckoutError("");
+    setCheckingOut(true);
+
+    try {
+      const response = await shopifyCheckoutService.createSinglePartCheckout(vm.id, 1);
+      const checkoutUrl = response?.item?.checkoutUrl;
+
+      if (!checkoutUrl) {
+        throw new Error("Shopify checkout URL was not returned.");
+      }
+
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      const apiMessage = err?.response?.data?.errors?.[0];
+      setCheckoutError(apiMessage || err.message || "Unable to start Shopify checkout.");
+      setCheckingOut(false);
+    }
+  };
+
   const handleAdd = () => {
     const cartImage = galleryMain || vm.image;
 
@@ -130,6 +156,7 @@ function CustomerPartDetails() {
         name: vm.name,
         image: cartImage,
         unitPrice: vm.unitPrice,
+        maxQuantity: Number(vm.quantity) || 1,
       },
       1,
     );
@@ -201,11 +228,24 @@ function CustomerPartDetails() {
             </div>
           </div>
 
-          <div className="apd-actions">
+          {checkoutError && (
+            <div className="apd-checkout-error" role="alert">
+              {checkoutError}
+            </div>
+          )}
+
+          <div className="apd-actions apd-actions--stacked">
             <button
               className="apd-btn"
+              onClick={handleBuyNow}
+              disabled={!vm.canCheckout || checkingOut}
+            >
+              {checkingOut ? "Starting Checkout..." : "Buy Now"}
+            </button>
+            <button
+              className="apd-btn apd-btn--outlined"
               onClick={handleAdd}
-              disabled={Number.isFinite(vm.quantity) && vm.quantity <= 0}
+              disabled={!vm.canCheckout}
             >
               Add to Cart
             </button>

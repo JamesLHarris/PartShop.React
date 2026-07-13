@@ -13,10 +13,14 @@ import { FaUser, FaSignOutAlt } from "react-icons/fa";
 import MakeWithModelsFlyout from "./MakeWithModelsFlyout";
 import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
+import { useCart } from "./CartContext";
+import shopifyCheckoutService from "../service/shopifyCheckoutService";
 
 function HomeHeader({ value, onChange }) {
   const idOf = (x) => x?.id ?? x?.Id;
+  const { items } = useCart();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const [modelsData, setModelsData] = useState({
     optionsUnmapped: [],
@@ -223,8 +227,28 @@ function HomeHeader({ value, onChange }) {
     navigate("/");
   };
 
-  const handleCheckout = () => {
-    window.location.href = "/checkout";
+  const handleCheckout = async () => {
+    if (!items || items.length === 0) {
+      toastr.info("Your cart is empty.");
+      return;
+    }
+
+    setCheckingOut(true);
+
+    try {
+      const response = await shopifyCheckoutService.createCartCheckout(items);
+      const checkoutUrl = response?.item?.checkoutUrl;
+
+      if (!checkoutUrl) {
+        throw new Error("Shopify checkout URL was not returned.");
+      }
+
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      const apiMessage = err?.response?.data?.errors?.[0];
+      toastr.error(apiMessage || err.message || "Unable to start Shopify checkout.");
+      setCheckingOut(false);
+    }
   };
 
   const onGetError = () => {
@@ -301,6 +325,7 @@ function HomeHeader({ value, onChange }) {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           onCheckout={handleCheckout}
+          isCheckingOut={checkingOut}
         />
       </header>
     </div>
