@@ -104,7 +104,8 @@ function CustomerPartDetails() {
       unitPrice: Number(p.price) || 0,
       description: p.description,
       image: buildImageUrl(p.image),
-      quantity: p.quantity,
+      quantity: Number(p.quantity),
+      quantitySold: Number(p.quantitySold) || 0,
       canCheckout:
         (p.availableStatus ?? get(p, "available", "status")) === "Available" &&
         Number(p.quantity) > 0,
@@ -223,8 +224,18 @@ function CustomerPartDetails() {
               <dd>{vm.price}</dd>
             </div>
             <div>
-              <dt>In Stock</dt>
-              <dd>{Number.isFinite(vm.quantity) ? vm.quantity : "—"}</dd>
+              <dt>Inventory</dt>
+              <dd>
+                <span>
+                  In stock: {Number.isFinite(vm.quantity) ? vm.quantity : "—"}
+                </span>
+                {vm.quantitySold > 0 && (
+                  <>
+                    <span aria-hidden="true"> | </span>
+                    <span>Sold: {vm.quantitySold}</span>
+                  </>
+                )}
+              </dd>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import makeService from "../service/makeService";
 import modelService from "../service/modelService";
 
@@ -6,83 +6,221 @@ function MakeModelSelector({
   onSelectionChange,
   initialMakeId = "",
   initialModelId = "",
+  idPrefix = "make-model",
+  disabled = false,
 }) {
   const [makes, setMakes] = useState([]);
   const [models, setModels] = useState([]);
-  const [selectedMakeId, setSelectedMakeId] = useState(
-    String(initialMakeId || ""),
-  );
-  const [selectedModelId, setSelectedModelId] = useState(
-    String(initialModelId || ""),
-  );
+  const [selectedCompanyMakeId, setSelectedCompanyMakeId] = useState("");
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [isLoadingMakes, setIsLoadingMakes] = useState(true);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  // Prevent an older request from replacing the results of a newer selection.
+  const modelRequestIdRef = useRef(0);
 
   useEffect(() => {
-    makeService.getAllCompanies().then((res) => {
-      setMakes(res.item || []);
-    });
+    let isMounted = true;
+
+    setIsLoadingMakes(true);
+    setLoadError("");
+
+    makeService
+      .getAllCompanies()
+      .then((res) => {
+        if (!isMounted) return;
+        setMakes(Array.isArray(res?.item) ? res.item : []);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        console.error("Failed to load makes", error);
+        setMakes([]);
+        setLoadError("Unable to load makes.");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingMakes(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    setSelectedMakeId(String(initialMakeId || ""));
-  }, [initialMakeId]);
+    const normalizedInitialMakeId = String(initialMakeId || "");
+    const normalizedInitialModelId = String(initialModelId || "");
 
-  useEffect(() => {
-    setSelectedModelId(String(initialModelId || ""));
-  }, [initialModelId]);
-
-  useEffect(() => {
-    if (!selectedMakeId) {
+    if (!normalizedInitialMakeId) {
+      modelRequestIdRef.current += 1;
+      setSelectedCompanyMakeId("");
+      setSelectedModelId("");
       setModels([]);
+      setIsLoadingModels(false);
       return;
     }
 
-    modelService.getAllModelsByMakeId(selectedMakeId).then((res) => {
-      setModels(res.item || []);
-    });
-  }, [selectedMakeId]);
+    const requestId = modelRequestIdRef.current + 1;
+    modelRequestIdRef.current = requestId;
 
-  const handleMakeChange = (e) => {
-    const newMakeId = e.target.value;
-    setSelectedMakeId(newMakeId);
+    setIsLoadingModels(true);
+    setLoadError("");
+
+    modelService
+      .getAllModelsByMakeId(normalizedInitialMakeId)
+      .then((res) => {
+        if (modelRequestIdRef.current !== requestId) return;
+
+        const nextModels = Array.isArray(res?.item) ? res.item : [];
+        const firstModel = nextModels[0];
+        const initialModelExists = nextModels.some(
+          (model) => String(model.id) === normalizedInitialModelId,
+        );
+
+        setModels(nextModels);
+        setSelectedCompanyMakeId(
+          firstModel?.companyMakeId
+            ? String(firstModel.companyMakeId)
+            : normalizedInitialMakeId,
+        );
+        setSelectedModelId(
+          initialModelExists ? normalizedInitialModelId : "",
+        );
+      })
+      .catch((error) => {
+        if (modelRequestIdRef.current !== requestId) return;
+        console.error("Failed to load models", error);
+        setModels([]);
+        setSelectedCompanyMakeId("");
+        setSelectedModelId("");
+        setLoadError("Unable to load models.");
+      })
+      .finally(() => {
+        if (modelRequestIdRef.current === requestId) {
+          setIsLoadingModels(false);
+        }
+      });
+  }, [initialMakeId, initialModelId]);
+
+  const loadModelsForCompany = (companyMakeId) => {
+    const requestId = modelRequestIdRef.current + 1;
+    modelRequestIdRef.current = requestId;
+
+    setIsLoadingModels(true);
+    setLoadError("");
+
+    modelService
+      .getAllModelsByMakeId(companyMakeId)
+      .then((res) => {
+        if (modelRequestIdRef.current !== requestId) return;
+        setModels(Array.isArray(res?.item) ? res.item : []);
+      })
+      .catch((error) => {
+        if (modelRequestIdRef.current !== requestId) return;
+        console.error("Failed to load models", error);
+        setModels([]);
+        setLoadError("Unable to load models.");
+      })
+      .finally(() => {
+        if (modelRequestIdRef.current === requestId) {
+          setIsLoadingModels(false);
+        }
+      });
+  };
+
+  const handleMakeChange = (event) => {
+    const companyMakeId = event.target.value;
+
+    setSelectedCompanyMakeId(companyMakeId);
     setSelectedModelId("");
     setModels([]);
 
-    if (newMakeId) {
-      modelService.getAllModelsByMakeId(newMakeId).then((res) => {
-        setModels(res.item || []);
-      });
+    // A company by itself is not a valid Parts.MakeId. Wait until the user
+    // selects a model, then return that model's actual company/model-pair ID.
+    onSelectionChange?.({
+      makeId: "",
+      modelId: "",
+      companyMakeId,
+    });
+
+    if (!companyMakeId) {
+      modelRequestIdRef.current += 1;
+      setIsLoadingModels(false);
+      return;
     }
 
-    onSelectionChange?.({ makeId: newMakeId, modelId: "" });
+    loadModelsForCompany(companyMakeId);
   };
 
-  const handleModelChange = (e) => {
-    const newModelId = e.target.value;
-    setSelectedModelId(newModelId);
-    onSelectionChange?.({ makeId: selectedMakeId, modelId: newModelId });
+  const handleModelChange = (event) => {
+    const modelId = event.target.value;
+    setSelectedModelId(modelId);
+
+    const selectedModel = models.find(
+      (model) => String(model.id) === String(modelId),
+    );
+
+    onSelectionChange?.({
+      makeId: selectedModel?.makeId ? String(selectedModel.makeId) : "",
+      modelId: selectedModel?.id ? String(selectedModel.id) : "",
+      companyMakeId: selectedCompanyMakeId,
+      company: selectedModel?.company || "",
+      modelName: selectedModel?.name || "",
+    });
   };
+
+  const companySelectId = `${idPrefix}-company`;
+  const modelSelectId = `${idPrefix}-model`;
 
   return (
-    <div>
-      <label>Make:</label>
-      <select value={selectedMakeId} onChange={handleMakeChange}>
-        <option value="">Select Make</option>
-        {makes.map((make) => (
-          <option key={make.id} value={make.id}>
-            {make.company}
+    <div className="make-model-selector">
+      <div className="make-model-selector__field">
+        <label htmlFor={companySelectId}>Make</label>
+        <select
+          id={companySelectId}
+          className="apd-input"
+          value={selectedCompanyMakeId}
+          onChange={handleMakeChange}
+          disabled={disabled || isLoadingMakes}
+        >
+          <option value="">
+            {isLoadingMakes ? "Loading makes..." : "Select Make"}
           </option>
-        ))}
-      </select>
+          {makes.map((make) => (
+            <option key={make.id} value={make.id}>
+              {make.company}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label>Model:</label>
-      <select value={selectedModelId} onChange={handleModelChange}>
-        <option value="">Select Model</option>
-        {models.map((model) => (
-          <option key={model.id} value={model.id}>
-            {model.name}
+      <div className="make-model-selector__field">
+        <label htmlFor={modelSelectId}>Model</label>
+        <select
+          id={modelSelectId}
+          className="apd-input"
+          value={selectedModelId}
+          onChange={handleModelChange}
+          disabled={disabled || !selectedCompanyMakeId || isLoadingModels}
+        >
+          <option value="">
+            {isLoadingModels ? "Loading models..." : "Select Model"}
           </option>
-        ))}
-      </select>
+          {models.map((model) => (
+            <option key={model.makeId || model.id} value={model.id}>
+              {model.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loadError ? (
+        <div className="make-model-selector__error" role="alert">
+          {loadError}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from "react";
-import quantumForgeLogo from "../itemPhotos/Tig_Teddy.png";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import currentLogo from "../itemPhotos/Tig_Teddy.png";
+import { NavLink, useNavigate } from "react-router-dom";
 import toastr from "toastr";
-import modelService from "../service/modelService";
 import makeService from "../service/makeService";
 import catagoryService from "../service/catagoryService";
-import ModelDropDown from "./ModelDropDown";
-import MakeDropDown from "./MakeDropDown";
 import CatagoryDropDown from "./CatagoryDropDown";
 import "./HomeHeader.css";
-import { FaUser, FaSignOutAlt } from "react-icons/fa";
+import { FaBars, FaSignOutAlt, FaTimes, FaUser } from "react-icons/fa";
 import MakeWithModelsFlyout from "./MakeWithModelsFlyout";
 import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
@@ -17,53 +14,67 @@ import { useCart } from "./CartContext";
 import shopifyCheckoutService from "../service/shopifyCheckoutService";
 
 function HomeHeader({ value, onChange }) {
-  const idOf = (x) => x?.id ?? x?.Id;
+  const idOf = (item) => item?.id ?? item?.Id;
   const { items } = useCart();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [checkingOut, setCheckingOut] = useState(false);
-
-  const [modelsData, setModelsData] = useState({
-    optionsUnmapped: [],
-    optionsComponents: [],
-  });
-
-  const [makeData, setMakeData] = useState({
-    optionsUnmapped: [],
-    optionsComponents: [],
-  });
-
-  const [catagoryData, setCatagoryData] = useState({
-    optionsUnmapped: [],
-    optionsComponents: [],
-  });
-
   const navigate = useNavigate();
 
-  // Local-only input state (Option B: no API calls while typing)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [makes, setMakes] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchText, setSearchText] = useState(value?.q ?? "");
+  const [userId, setUserId] = useState(null);
 
-  // Keep local searchText in sync when external actions clear q (filters reset)
   useEffect(() => {
     setSearchText(value?.q ?? "");
   }, [value?.q]);
 
-  const handleSearchInputChange = (e) => {
-    setSearchText(e.target.value);
-  };
+  useEffect(() => {
+    let isMounted = true;
 
-  const submitSearch = (e) => {
-    e.preventDefault();
+    makeService
+      .getAllCompanies()
+      .then((response) => {
+        if (isMounted) {
+          setMakes(Array.isArray(response?.item) ? response.item : []);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load makes for the header.", error);
+        if (isMounted) {
+          setMakes([]);
+          toastr.error("Failed to load make filters.", "Error");
+        }
+      });
 
-    const q = (searchText ?? "").trim();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-    // Push committed query to Layout (this triggers PartsBrowse fetch)
-    onChange?.({ q });
+  useEffect(() => {
+    let isMounted = true;
 
-    // Ensure user lands on browse after searching
-    navigate("/browse");
-  };
+    catagoryService
+      .getAllCatagories()
+      .then((response) => {
+        if (isMounted) {
+          setCategories(Array.isArray(response?.item) ? response.item : []);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load categories for the header.", error);
+        if (isMounted) {
+          setCategories([]);
+          toastr.error("Failed to load category filters.", "Error");
+        }
+      });
 
-  const [userId, setUserId] = useState(null);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const id = localStorage.getItem("userId");
@@ -72,134 +83,71 @@ function HomeHeader({ value, onChange }) {
     }
   }, []);
 
-  const handleLoginClick = () => navigate("/login");
-
-  const mapModelOptions = (option) => {
-    return <ModelDropDown data={option} onSelect={handleModelSelect} />;
-  };
-
-  const mapMakeOptions = (option) => {
-    return <MakeDropDown data={option} onSelect={handleMakeSelect} />;
-  };
-
-  const mapCatagoryOptions = (option) => {
-    return <CatagoryDropDown data={option} onSelect={handleCategorySelect} />;
-  };
-
   useEffect(() => {
-    modelService.getAllModels().then(onGetModelSuccess).catch(onGetError);
+    const closeOnDesktop = () => {
+      if (window.innerWidth > 900) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", closeOnDesktop);
+    return () => window.removeEventListener("resize", closeOnDesktop);
   }, []);
 
-  const onGetModelSuccess = (response) => {
-    let getData = response.item;
-    console.log("Model Data", getData);
-    setModelsData((prevState) => {
-      const pd = { ...prevState };
-      pd.optionsComponents = mapModelOptions(getData);
-      pd.optionsUnmapped = getData;
-      return pd;
-    });
-  };
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  useEffect(() => {
-    makeService.getAllMakes().then(onGetMakeSuccess).catch(onGetError);
-  }, []);
-
-  const onGetMakeSuccess = (response) => {
-    let getData = response.item;
-    console.log("Make Data", getData);
-    setMakeData((prevState) => {
-      const pd = { ...prevState };
-      pd.optionsComponents = mapMakeOptions(getData);
-      pd.optionsUnmapped = getData;
-      return pd;
-    });
-  };
-
-  useEffect(() => {
-    catagoryService
-      .getAllCatagories()
-      .then(onGetCatagorySuccess)
-      .catch(onGetError);
-  }, []);
-
-  const onGetCatagorySuccess = (response) => {
-    let getData = response.item;
-    setCatagoryData((prevState) => {
-      const pd = { ...prevState };
-      pd.optionsComponents = mapCatagoryOptions(getData);
-      pd.optionsUnmapped = getData;
-      return pd;
-    });
-  };
-
-  const handleRecentlyListedClick = (e) => {
-    e.preventDefault();
-
-    // clear committed query + clear local input
+  const clearFiltersAndBrowse = () => {
     setSearchText("");
-
     onChange?.({
       makeId: null,
       modelId: null,
       categoryId: null,
       q: "",
     });
-
+    closeMobileMenu();
     navigate("/browse");
   };
 
-  const handleMakeSelected = (mk) => {
-    setSearchText("");
-    onChange?.({
-      makeId: idOf(mk),
-      modelId: null,
-      q: "",
-    });
+  const submitSearch = (event) => {
+    event.preventDefault();
+
+    onChange?.({ q: (searchText ?? "").trim() });
+    closeMobileMenu();
     navigate("/browse");
   };
 
-  const handleModelSelected = (mk, m) => {
-    setSearchText("");
-    onChange?.({
-      makeId: idOf(mk),
-      modelId: idOf(m),
-      q: "",
-    });
-    navigate("/browse");
+  const handleBrowseClick = (event) => {
+    event.preventDefault();
+    clearFiltersAndBrowse();
   };
 
   const handleMakeSelect = (make) => {
     if (!onChange) return;
 
     setSearchText("");
-
-    const id = make.id ?? make.Id;
     onChange({
-      makeId: id,
+      makeId: idOf(make) ?? null,
       modelId: null,
       categoryId: null,
       q: "",
     });
 
+    closeMobileMenu();
     navigate("/browse");
   };
 
-  const handleModelSelect = (model) => {
+  const handleModelSelect = (make, model) => {
     if (!onChange) return;
 
     setSearchText("");
-
-    const modelId = model.id ?? model.Id;
-    const makeId = model.makeId ?? model.MakeId ?? value?.makeId ?? null;
-
     onChange({
-      makeId,
-      modelId,
+      makeId: model?.makeId ?? model?.MakeId ?? idOf(make) ?? null,
+      modelId: idOf(model) ?? null,
       categoryId: null,
       q: "",
     });
 
+    closeMobileMenu();
     navigate("/browse");
   };
 
@@ -207,23 +155,27 @@ function HomeHeader({ value, onChange }) {
     if (!onChange) return;
 
     setSearchText("");
-
-    const categoryId = category.id ?? category.Id;
-
     onChange({
-      categoryId,
+      categoryId: idOf(category) ?? null,
       makeId: null,
       modelId: null,
       q: "",
     });
 
+    closeMobileMenu();
     navigate("/browse");
+  };
+
+  const handleLoginClick = () => {
+    closeMobileMenu();
+    navigate("/login");
   };
 
   const handleLogout = () => {
     localStorage.removeItem("userId");
     localStorage.removeItem("isLoggedIn");
     setUserId(null);
+    closeMobileMenu();
     navigate("/");
   };
 
@@ -244,81 +196,146 @@ function HomeHeader({ value, onChange }) {
       }
 
       window.location.assign(checkoutUrl);
-    } catch (err) {
-      const apiMessage = err?.response?.data?.errors?.[0];
-      toastr.error(apiMessage || err.message || "Unable to start Shopify checkout.");
+    } catch (error) {
+      const apiMessage = error?.response?.data?.errors?.[0];
+      toastr.error(
+        apiMessage || error.message || "Unable to start Shopify checkout.",
+      );
       setCheckingOut(false);
     }
   };
 
-  const onGetError = () => {
-    toastr.error("Failed to load surveys on AnswersPage.", "Error");
-  };
-
   return (
     <div className="home-header">
-      <header className="App-header">
-        <img src={quantumForgeLogo} className="App-logo" alt="Quantum Forge" />
-
-        <div className="header-row">
-          <nav className="nav-links">
-            <a href="/home">Home</a>
-            <a href="/browse" onClick={handleRecentlyListedClick}>
-              Recently Listed
-            </a>
-          </nav>
-
-          <div className="top-selection">
-            <MakeWithModelsFlyout
-              makes={makeData.optionsUnmapped}
-              onSelectMake={handleMakeSelect}
-              onSelectModel={handleModelSelect}
+      <header className="site-header">
+        <div className="site-header__top">
+          <NavLink
+            to="/browse"
+            className="site-brand"
+            onClick={clearFiltersAndBrowse}
+            aria-label="Go to Browse"
+          >
+            <img
+              src={currentLogo}
+              className="App-logo"
+              alt="G Rand Sons Parts"
             />
-            {modelsData.optionsComponents}
-            {catagoryData.optionsComponents}
-          </div>
+          </NavLink>
 
-          <nav className="nav-links end-links">
-            <a href="/contact">Contact Us</a>
-            <a href="/about">About Us</a>
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-label={mobileMenuOpen ? "Close navigation" : "Open navigation"}
+            aria-controls="primary-navigation"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((current) => !current)}
+          >
+            {mobileMenuOpen ? <FaTimes /> : <FaBars />}
+          </button>
+
+          <div className="account-controls">
+            {!userId ? (
+              <button className="login-button" onClick={handleLoginClick}>
+                Login
+              </button>
+            ) : (
+              <>
+                <div className="user-indicator">
+                  <FaUser aria-hidden="true" />
+                  <span>User #{userId}</span>
+                </div>
+
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `admin-link ${isActive ? "is-active" : ""}`
+                  }
+                  onClick={closeMobileMenu}
+                >
+                  Admin
+                </NavLink>
+
+                <button
+                  type="button"
+                  className="logout-button"
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                  title="Log out"
+                >
+                  <FaSignOutAlt aria-hidden="true" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div
+          id="primary-navigation"
+          className={`header-row ${mobileMenuOpen ? "is-open" : ""}`}
+        >
+          <nav className="nav-links" aria-label="Primary navigation">
+            <NavLink
+              to="/browse"
+              className={({ isActive }) =>
+                `header-nav-link ${isActive ? "is-active" : ""}`
+              }
+              onClick={handleBrowseClick}
+            >
+              Browse
+            </NavLink>
+
+            <div className="top-selection" aria-label="Part filters">
+              <MakeWithModelsFlyout
+                makes={makes}
+                onSelectMake={handleMakeSelect}
+                onSelectModel={handleModelSelect}
+              />
+
+              <CatagoryDropDown
+                data={categories}
+                onSelect={handleCategorySelect}
+              />
+            </div>
+
+            <NavLink
+              to="/contact"
+              className={({ isActive }) =>
+                `header-nav-link ${isActive ? "is-active" : ""}`
+              }
+              onClick={closeMobileMenu}
+            >
+              Contact Us
+            </NavLink>
+
+            <NavLink
+              to="/about"
+              className={({ isActive }) =>
+                `header-nav-link ${isActive ? "is-active" : ""}`
+              }
+              onClick={closeMobileMenu}
+            >
+              About Us
+            </NavLink>
           </nav>
 
-          {/* Option B: no API calls while typing */}
-          <form onSubmit={submitSearch} className="header-search">
+          <form onSubmit={submitSearch} className="header-search" role="search">
+            <label className="sr-only" htmlFor="site-header-search">
+              Search parts
+            </label>
             <input
-              type="text"
+              id="site-header-search"
+              type="search"
               name="q"
               value={searchText}
-              onChange={handleSearchInputChange}
+              onChange={(event) => setSearchText(event.target.value)}
               placeholder="Search parts..."
             />
             <button type="submit">Search</button>
           </form>
 
-          <CartIcon onClick={() => setDrawerOpen(true)} />
-        </div>
-
-        <div>
-          {!userId ? (
-            <button className="login-button" onClick={handleLoginClick}>
-              Login
-            </button>
-          ) : (
-            <div className="user-controls">
-              <div className="user-indicator">
-                <FaUser style={{ marginRight: "6px" }} />
-                <span>User #{userId}</span>
-              </div>
-
-              <a href="/admin" className="admin-link">
-                Admin
-              </a>
-
-              <button className="logout-button" onClick={handleLogout}>
-                <FaSignOutAlt />
-              </button>
-            </div>
-          )}
+          <div className="header-cart-control">
+            <CartIcon onClick={() => setDrawerOpen(true)} />
+          </div>
         </div>
 
         <CartDrawer

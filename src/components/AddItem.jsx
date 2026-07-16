@@ -6,8 +6,6 @@ import "./AdminPartDetails.css";
 import "./add-item.css";
 
 import addItem from "../itemPhotos/add_item.png";
-import makeService from "../service/makeService";
-
 import MakeModelSelector from "./MakeModelSelector";
 import LocationSelector from "./LocationSelector";
 import ImageDropZone from "./ImageDropZone";
@@ -40,7 +38,6 @@ function AddItem() {
   const [catagoryOptions, setCatagoryOptions] = useState([]);
   const [conditionOptions, setConditionOptions] = useState([]);
   const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
-  const [makeOptions, setMakeOptions] = useState([]);
 
   const [formData, setFormData] = useState(initialForm);
   const [extraCategories, setExtraCategories] = useState([]);
@@ -67,11 +64,6 @@ function AddItem() {
       .getAllCatagories()
       .then((res) => setCatagoryOptions(res.item || []))
       .catch(() => toastr.error("Failed to load categories.", "Error"));
-
-    makeService
-      .getAllMakes()
-      .then((res) => setMakeOptions(res.item || []))
-      .catch(() => toastr.error("Failed to load makes.", "Error"));
 
     conditionService
       .getAllConditions()
@@ -206,6 +198,7 @@ function AddItem() {
       ...prev,
       {
         makeId: "",
+        modelId: "",
         yearStart: "",
         yearEnd: "",
       },
@@ -215,6 +208,20 @@ function AddItem() {
   const updateFitment = (index, field, value) => {
     setFitments((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    );
+  };
+
+  const updateFitmentSelection = (index, { makeId, modelId }) => {
+    setFitments((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              makeId: makeId ? String(makeId) : "",
+              modelId: modelId ? String(modelId) : "",
+            }
+          : item,
+      ),
     );
   };
 
@@ -295,6 +302,7 @@ function AddItem() {
         })
         .map((f) => ({
           makeId: safeString(f.makeId),
+          modelId: safeString(f.modelId),
           yearStart: safeString(f.yearStart),
           yearEnd: safeString(f.yearEnd),
         })),
@@ -454,6 +462,73 @@ function AddItem() {
     return rotatedFiles;
   };
 
+  const getFitmentValidationError = () => {
+    const normalizedFitments = [];
+    const primaryYear = Number(formData.year);
+
+    if (formData.makeId && Number.isInteger(primaryYear)) {
+      normalizedFitments.push({
+        makeId: String(formData.makeId),
+        yearStart: primaryYear,
+        yearEnd: primaryYear,
+        label: "Primary fitment",
+      });
+    }
+
+    for (let index = 0; index < fitments.length; index++) {
+      const fitment = fitments[index];
+      const rowNumber = index + 1;
+      const hasAnyValue = Boolean(
+        fitment.makeId || fitment.modelId || fitment.yearStart || fitment.yearEnd,
+      );
+
+      if (!hasAnyValue) continue;
+
+      if (!fitment.makeId || !fitment.modelId) {
+        return `Additional fitment ${rowNumber} needs both a make and model.`;
+      }
+
+      const yearStartText = String(fitment.yearStart || "").trim();
+      const yearEndText = String(fitment.yearEnd || "").trim();
+
+      if (!yearStartText || !yearEndText) {
+        return `Additional fitment ${rowNumber} needs both a start and end year.`;
+      }
+
+      const yearStart = Number(yearStartText);
+      const yearEnd = Number(yearEndText);
+
+      if (!Number.isInteger(yearStart) || !Number.isInteger(yearEnd)) {
+        return `Additional fitment ${rowNumber} needs valid whole-number years.`;
+      }
+
+      if (yearStart > yearEnd) {
+        return `Additional fitment ${rowNumber} has a start year after its end year.`;
+      }
+
+      normalizedFitments.push({
+        makeId: String(fitment.makeId),
+        yearStart,
+        yearEnd,
+        label: `Additional fitment ${rowNumber}`,
+      });
+    }
+
+    const seen = new Map();
+
+    for (const fitment of normalizedFitments) {
+      const key = `${fitment.makeId}|${fitment.yearStart}|${fitment.yearEnd}`;
+
+      if (seen.has(key)) {
+        return `${fitment.label} duplicates ${seen.get(key)}.`;
+      }
+
+      seen.set(key, fitment.label);
+    }
+
+    return "";
+  };
+
   const buildPayload = () => {
     const payload = new FormData();
 
@@ -544,6 +619,13 @@ function AddItem() {
 
     if (Number(formData.quantity) < 0) {
       toastr.error("Quantity cannot be negative.");
+      return;
+    }
+
+    const fitmentValidationError = getFitmentValidationError();
+
+    if (fitmentValidationError) {
+      toastr.error(fitmentValidationError);
       return;
     }
 
@@ -952,47 +1034,55 @@ function AddItem() {
                 <div className="apd-repeater">
                   {fitments.map((fitment, index) => (
                     <div key={`fitment-${index}`} className="apd-fitment-row">
-                      <select
-                        className="apd-input"
-                        value={fitment.makeId}
-                        onChange={(e) =>
-                          updateFitment(index, "makeId", e.target.value)
-                        }
+                      <div className="apd-fitment-row__selector">
+                        <MakeModelSelector
+                          idPrefix={`additional-fitment-${index}`}
+                          initialMakeId={fitment.makeId}
+                          initialModelId={fitment.modelId}
+                          onSelectionChange={(selection) =>
+                            updateFitmentSelection(index, selection)
+                          }
+                          disabled={submitting}
+                        />
+                      </div>
+
+                      <label
+                        className="apd-fitment-row__year"
+                        htmlFor={`additional-fitment-${index}-year-start`}
                       >
-                        <option value="">Select Make</option>
-                        {makeOptions
-                          .filter(
-                            (make) =>
-                              String(make.id) !== String(formData.makeId),
-                          )
-                          .map((make) => (
-                            <option key={make.id} value={make.id}>
-                              {make.company} - {make.model?.name}
-                            </option>
-                          ))}
-                      </select>
+                        <span>Year Start</span>
+                        <input
+                          id={`additional-fitment-${index}-year-start`}
+                          className="apd-input"
+                          inputMode="numeric"
+                          placeholder="e.g. 1998"
+                          value={fitment.yearStart}
+                          onChange={(e) =>
+                            updateFitment(index, "yearStart", e.target.value)
+                          }
+                        />
+                      </label>
 
-                      <input
-                        className="apd-input"
-                        placeholder="Year Start"
-                        value={fitment.yearStart}
-                        onChange={(e) =>
-                          updateFitment(index, "yearStart", e.target.value)
-                        }
-                      />
-
-                      <input
-                        className="apd-input"
-                        placeholder="Year End"
-                        value={fitment.yearEnd}
-                        onChange={(e) =>
-                          updateFitment(index, "yearEnd", e.target.value)
-                        }
-                      />
+                      <label
+                        className="apd-fitment-row__year"
+                        htmlFor={`additional-fitment-${index}-year-end`}
+                      >
+                        <span>Year End</span>
+                        <input
+                          id={`additional-fitment-${index}-year-end`}
+                          className="apd-input"
+                          inputMode="numeric"
+                          placeholder="e.g. 2005"
+                          value={fitment.yearEnd}
+                          onChange={(e) =>
+                            updateFitment(index, "yearEnd", e.target.value)
+                          }
+                        />
+                      </label>
 
                       <button
                         type="button"
-                        className="apd-btn apd-btn--outlined apd-btn--sm"
+                        className="apd-btn apd-btn--outlined apd-btn--sm apd-fitment-row__remove"
                         onClick={() => removeFitment(index)}
                         disabled={submitting}
                       >

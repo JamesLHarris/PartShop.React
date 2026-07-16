@@ -205,3 +205,82 @@ html {
 .apd-dropzone__title {
   font-weight: 600;
 }
+
+
+/* Shared make/model selectors used by primary and additional fitments. */
+.make-model-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.make-model-selector__field {
+  min-width: 0;
+}
+
+.make-model-selector__field label,
+.apd-fitment-row__year > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #d8d8d8;
+}
+
+.make-model-selector__error {
+  grid-column: 1 / -1;
+  color: #ff9f9f;
+  font-size: 0.875rem;
+}
+
+.apd-fitment-row {
+  display: grid;
+  grid-template-columns: minmax(300px, 2fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid #343434;
+  border-radius: 10px;
+  background: #151515;
+}
+
+.apd-fitment-row__selector,
+.apd-fitment-row__year {
+  min-width: 0;
+}
+
+.apd-fitment-row__year {
+  margin: 0;
+}
+
+.apd-fitment-row__remove {
+  margin-bottom: 1px;
+}
+
+@media (max-width: 900px) {
+  .apd-fitment-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .apd-fitment-row__selector {
+    grid-column: 1 / -1;
+  }
+
+  .apd-fitment-row__remove {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 560px) {
+  .make-model-selector,
+  .apd-fitment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .apd-fitment-row__selector,
+  .apd-fitment-row__remove {
+    grid-column: auto;
+  }
+}

@@ -15,7 +15,7 @@ function PartsBrowse() {
     isLoading: false,
   });
 
-  // Guards against race conditions (fast clicking / quick filter changes)
+  // Guards against race conditions from quick filter and pagination changes.
   const requestSeq = useRef(0);
 
   useEffect(() => {
@@ -24,66 +24,65 @@ function PartsBrowse() {
 
       setVm((prev) => ({ ...prev, isLoading: true }));
 
+      const q = (filters?.q ?? "").trim();
+      const makeId = filters?.makeId ?? null;
+      const modelId = filters?.modelId ?? null;
+      const categoryId = filters?.categoryId ?? null;
+      const hasFilters = Boolean(q || makeId || modelId || categoryId);
+
       try {
         let response;
 
-        const q = (filters?.q ?? "").trim();
-        const hasQuery = q.length > 0;
-
-        // Priority: Search -> Model -> Category -> Recently listed
-        if (hasQuery) {
+        if (hasFilters) {
+          // Use one endpoint for all customer filters so keyword, company,
+          // model, category, fitments, pagination, and availability agree.
           response = await partsService.customerSearch({
             pageIndex,
             pageSize,
-            q,
-            makeId: filters?.makeId ?? null,
-            modelId: filters?.modelId ?? null,
-            categoryId: filters?.categoryId ?? null,
+            q: q || undefined,
+            makeId,
+            modelId,
+            categoryId,
+            availableId: 1,
           });
-        } else if (filters?.modelId) {
-          response = await partsService.getByModelCustomer(
-            pageIndex,
-            pageSize,
-            filters.modelId,
-          );
-        } else if (filters?.categoryId) {
-          response = await partsService.getByCategoryCustomer(
-            pageIndex,
-            pageSize,
-            filters.categoryId,
-          );
         } else {
-          // Default: recently listed / all available
           response = await partsService.getAllAvailablePartsCustomer(
             pageIndex,
             pageSize,
           );
         }
 
-        // If another request started after this one, ignore this response
         if (seq !== requestSeq.current) return;
 
         const paged = response?.item;
-        const items = paged?.pagedItems ?? [];
-        const total = paged?.totalCount ?? 0;
 
         setVm({
-          items,
-          totalCount: total,
+          items: Array.isArray(paged?.pagedItems) ? paged.pagedItems : [],
+          totalCount: Number(paged?.totalCount ?? 0),
           isLoading: false,
         });
-      } catch (err) {
+      } catch (error) {
         if (seq !== requestSeq.current) return;
 
-        console.error("Failed to load parts on Browse.", err);
+        // The API currently returns 404 when a valid search has zero rows.
+        // Treat that as an empty result instead of an application failure.
+        if (error?.response?.status === 404) {
+          setVm({
+            items: [],
+            totalCount: 0,
+            isLoading: false,
+          });
+          return;
+        }
+
+        console.error("Failed to load parts on Browse.", error);
         toastr.error("Failed to load parts.", "Error");
 
-        setVm((prev) => ({
-          ...prev,
+        setVm({
           items: [],
           totalCount: 0,
           isLoading: false,
-        }));
+        });
       }
     };
 
@@ -97,42 +96,44 @@ function PartsBrowse() {
     pageSize,
   ]);
 
-  const cards = useMemo(() => {
-    return vm.items.map((part) => (
-      <PartCard
-        key={part.id}
-        id={part.id}
-        name={part.name}
-        make={part.make?.company ?? part.makeName}
-        condition={part.condition}
-        tested={part.tested}
-        rusted={part.rusted}
-        photo={part.image}
-        price={part.price}
-        description={part.description}
-      />
-    ));
-  }, [vm.items]);
+  const cards = useMemo(
+    () =>
+      vm.items.map((part) => (
+        <PartCard
+          key={part.id}
+          id={part.id}
+          name={part.name}
+          make={part.make?.company ?? part.makeName}
+          condition={part.condition}
+          tested={part.tested}
+          rusted={part.rusted}
+          photo={part.image}
+          price={part.price}
+          description={part.description}
+        />
+      )),
+    [vm.items],
+  );
 
   const totalPages = Math.max(1, Math.ceil(vm.totalCount / pageSize));
-
-  // Cap page buttons (prevents rendering huge button sets)
-  const MAX_PAGE_BUTTONS = 9;
-  const start = Math.max(0, pageIndex - Math.floor(MAX_PAGE_BUTTONS / 2));
-  const end = Math.min(totalPages - 1, start + MAX_PAGE_BUTTONS - 1);
+  const maxPageButtons = 9;
+  const start = Math.max(0, pageIndex - Math.floor(maxPageButtons / 2));
+  const end = Math.min(totalPages - 1, start + maxPageButtons - 1);
   const pageNumbers = [];
-  for (let i = Math.max(0, end - MAX_PAGE_BUTTONS + 1); i <= end; i++) {
+
+  for (let i = Math.max(0, end - maxPageButtons + 1); i <= end; i += 1) {
     pageNumbers.push(i);
   }
 
-  const hasActiveFilters =
-    (filters?.modelId ?? null) !== null ||
-    (filters?.categoryId ?? null) !== null ||
-    (filters?.q ?? "").trim().length > 0;
+  const hasActiveFilters = Boolean(
+    filters?.makeId ||
+      filters?.modelId ||
+      filters?.categoryId ||
+      (filters?.q ?? "").trim(),
+  );
 
   return (
     <>
-      {/* Status line (optional but helpful) */}
       <div className="browse-status">
         {vm.isLoading ? (
           <span>Loading…</span>
@@ -144,11 +145,8 @@ function PartsBrowse() {
         )}
       </div>
 
-      {/* Main content */}
       {vm.isLoading ? (
-        <div className="part-grid">
-          {/* Keep it simple: show nothing or a placeholder row; your CSS can style this */}
-        </div>
+        <div className="part-grid" />
       ) : vm.items.length === 0 ? (
         <div className="empty-state">
           <h4>No parts found</h4>
@@ -158,14 +156,13 @@ function PartsBrowse() {
         <div className="part-grid">{cards}</div>
       )}
 
-      {/* Pagination */}
       <div className="pageModifier">
         <div className="pageSize-Selector">
           <label>Page:</label>
 
           <div className="page-buttons">
             <button
-              onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+              onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
               disabled={pageIndex <= 0 || totalPages <= 1 || vm.isLoading}
             >
               Prev
@@ -184,14 +181,14 @@ function PartsBrowse() {
               </>
             )}
 
-            {pageNumbers.map((i) => (
+            {pageNumbers.map((pageNumber) => (
               <button
-                key={i}
-                onClick={() => setPageIndex(i)}
-                className={pageIndex === i ? "active" : ""}
+                key={pageNumber}
+                onClick={() => setPageIndex(pageNumber)}
+                className={pageIndex === pageNumber ? "active" : ""}
                 disabled={totalPages <= 1 || vm.isLoading}
               >
-                {i + 1}
+                {pageNumber + 1}
               </button>
             ))}
 
@@ -210,7 +207,9 @@ function PartsBrowse() {
 
             <button
               onClick={() =>
-                setPageIndex((p) => Math.min(totalPages - 1, p + 1))
+                setPageIndex((current) =>
+                  Math.min(totalPages - 1, current + 1),
+                )
               }
               disabled={
                 pageIndex >= totalPages - 1 || totalPages <= 1 || vm.isLoading
