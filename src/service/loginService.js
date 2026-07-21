@@ -15,11 +15,36 @@ const userLogin = (payload) => {
     withCredentials: true,
     crossdomain: true,
   };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const getCurrentUser = () => {
+  const config = {
+    method: "GET",
+    url: `${loginEndpoint}/me`,
+    withCredentials: true,
+    crossdomain: true,
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const userLogout = () => {
+  const config = {
+    method: "GET",
+    url: `${loginEndpoint}/logout`,
+    withCredentials: true,
+    crossdomain: true,
+  };
+
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
 const loginService = {
   userLogin,
+  getCurrentUser,
+  userLogout,
 };
 
 export default loginService;

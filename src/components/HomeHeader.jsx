@@ -17,6 +17,7 @@ import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
 import { useCart } from "./CartContext";
 import shopifyCheckoutService from "../service/shopifyCheckoutService";
+import loginService from "../service/loginService";
 
 function HomeHeader({ value, onChange }) {
   const idOf = (item) => item?.id ?? item?.Id;
@@ -30,7 +31,7 @@ function HomeHeader({ value, onChange }) {
   const [makes, setMakes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchText, setSearchText] = useState(value?.q ?? "");
-  const [userId, setUserId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     setSearchText(value?.q ?? "");
@@ -83,10 +84,77 @@ function HomeHeader({ value, onChange }) {
   }, []);
 
   useEffect(() => {
-    const id = localStorage.getItem("userId");
-    if (id) {
-      setUserId(id);
-    }
+    let isMounted = true;
+
+    const clearStoredUser = () => {
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("isLoggedIn");
+
+      if (isMounted) {
+        setCurrentUser(null);
+      }
+    };
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await loginService.getCurrentUser();
+        const user = response?.item;
+
+        if (!user) {
+          clearStoredUser();
+          return;
+        }
+
+        localStorage.setItem("userId", String(user.id));
+        localStorage.setItem("userName", user.name || user.email || "Admin");
+        localStorage.setItem("userEmail", user.email || "");
+        localStorage.setItem("userRole", user.roleName || "");
+        localStorage.setItem("isLoggedIn", "true");
+
+        if (isMounted) {
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          clearStoredUser();
+          return;
+        }
+
+        // Keep the UI usable during a temporary API/network problem.
+        const storedId = localStorage.getItem("userId");
+        const storedName = localStorage.getItem("userName");
+        const storedEmail = localStorage.getItem("userEmail");
+
+        if (isMounted && storedId) {
+          setCurrentUser({
+            id: Number(storedId),
+            name: storedName || storedEmail || "Admin",
+            email: storedEmail || "",
+          });
+        }
+      }
+    };
+
+    const handleAuthChanged = (event) => {
+      const user = event?.detail?.user;
+
+      if (user && isMounted) {
+        setCurrentUser(user);
+      } else {
+        loadCurrentUser();
+      }
+    };
+
+    loadCurrentUser();
+    window.addEventListener("site-auth-changed", handleAuthChanged);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("site-auth-changed", handleAuthChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -182,12 +250,22 @@ function HomeHeader({ value, onChange }) {
     navigate("/login");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("userId");
-    localStorage.removeItem("isLoggedIn");
-    setUserId(null);
-    closeMobileMenu();
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await loginService.userLogout();
+    } catch (error) {
+      // Always clear the local UI state, even if the server session already expired.
+      console.warn("Logout request did not complete cleanly.", error);
+    } finally {
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("isLoggedIn");
+      setCurrentUser(null);
+      closeMobileMenu();
+      navigate("/browse");
+    }
   };
 
   const handleCheckout = async () => {
@@ -245,7 +323,7 @@ function HomeHeader({ value, onChange }) {
           </button>
 
           <div className="account-controls">
-            {!userId ? (
+            {!currentUser ? (
               <button className="login-button" onClick={handleLoginClick}>
                 Login
               </button>
@@ -253,7 +331,7 @@ function HomeHeader({ value, onChange }) {
               <>
                 <div className="user-indicator">
                   <FaUser aria-hidden="true" />
-                  <span>User #{userId}</span>
+                  <span>{currentUser.name || currentUser.email || "Admin"}</span>
                 </div>
 
                 <NavLink
