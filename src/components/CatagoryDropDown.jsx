@@ -3,7 +3,12 @@ import "../dropDown.css";
 
 const CLOSE_DELAY_MS = 350;
 
-function CatagoryDropDown({ data = [], onSelect }) {
+function CatagoryDropDown({
+  data = [],
+  onSelect,
+  onOverview,
+  isOverviewActive = false,
+}) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const closeTimerRef = useRef(null);
@@ -69,13 +74,16 @@ function CatagoryDropDown({ data = [], onSelect }) {
   );
 
   const handleSelect = (category) => {
-    // Keep the original category object intact. HomeHeader extracts the ID and
-    // sends categoryId to the shared Browse search endpoint.
     onSelect?.(category);
     closeMenu();
   };
 
-  const handleButtonClick = () => {
+  const handleOverview = () => {
+    closeMenu();
+    onOverview?.();
+  };
+
+  const handleToggle = () => {
     cancelScheduledClose();
     setOpen((current) => !current);
   };
@@ -86,30 +94,42 @@ function CatagoryDropDown({ data = [], onSelect }) {
       className="dropdown"
       onMouseEnter={openMenu}
       onMouseLeave={scheduleClose}
-      onFocus={openMenu}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           scheduleClose();
         }
       }}
     >
-      <button
-        type="button"
-        className="dropbtn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls="category-filter-menu"
-        onClick={handleButtonClick}
-      >
-        Categories
-      </button>
+      <div className="category-split-control">
+        <button
+          type="button"
+          className={`dropbtn category-overview-button ${
+            isOverviewActive ? "is-active" : ""
+          }`}
+          onClick={handleOverview}
+        >
+          Categories
+        </button>
+
+        <button
+          type="button"
+          className="category-menu-toggle"
+          aria-label={open ? "Close category menu" : "Open category menu"}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls="category-filter-menu"
+          onClick={handleToggle}
+        >
+          <span aria-hidden="true">▾</span>
+        </button>
+      </div>
 
       {open && (
         <div
           id="category-filter-menu"
           className="dropdown-content"
           role="menu"
-          aria-label="Categories"
+          aria-label="Category filters"
           onMouseEnter={cancelScheduledClose}
           onMouseLeave={scheduleClose}
         >
@@ -117,12 +137,16 @@ function CatagoryDropDown({ data = [], onSelect }) {
             const categoryId =
               category?.id ??
               category?.Id ??
+              category?.categoryId ??
+              category?.CategoryId ??
               category?.catagoryId ??
               category?.CatagoryId ??
               index;
             const categoryName =
               category?.name ??
               category?.Name ??
+              category?.categoryName ??
+              category?.CategoryName ??
               category?.catagoryName ??
               category?.CatagoryName ??
               "Unnamed category";

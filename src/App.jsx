@@ -17,6 +17,7 @@ import AdminRefunds from "./components/AdminRefunds";
 import CustomerReturnRequest from "./components/CustomerReturnRequest";
 import Home from "./components/Home";
 import AdminDiscounts from "./components/AdminDiscounts";
+import CategoryLanding from "./components/CategoryLanding";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/browse" element={<PartsBrowse />} />
+            <Route path="/categories" element={<CategoryLanding />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<AdminActions />} />

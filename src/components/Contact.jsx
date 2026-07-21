@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import toastr from "toastr";
 import contactService from "../service/contactService";
 import "./Contact.css";
@@ -15,7 +15,7 @@ const initialFormData = {
 
 const inquiryOptions = [
   { value: "general", label: "General Question" },
-  { value: "parts", label: "Parts Inquiry" },
+  { value: "parts", label: "Part Inquiry" },
   { value: "orders", label: "Order Question" },
   { value: "returns", label: "Return / Refund Request" },
   { value: "shipping", label: "Shipping Question" },
@@ -24,7 +24,17 @@ const inquiryOptions = [
 ];
 
 function Contact() {
-  const [formData, setFormData] = useState(initialFormData);
+  const [searchParams] = useSearchParams();
+  const partIdParam = searchParams.get("partId");
+  const partId = /^\d+$/.test(partIdParam || "")
+    ? Number(partIdParam)
+    : null;
+
+  const [formData, setFormData] = useState(() => ({
+    ...initialFormData,
+    inquiryType: searchParams.get("inquiryType") || initialFormData.inquiryType,
+    subject: searchParams.get("subject") || "",
+  }));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onFormFieldChange = (event) => {
@@ -73,6 +83,7 @@ function Contact() {
       phone: formData.phone.trim(),
       subject: formData.subject.trim(),
       message: formData.message.trim(),
+      partId,
     };
   };
 

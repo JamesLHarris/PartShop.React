@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from "react";
 import currentLogo from "../itemPhotos/Tig_Teddy.png";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import toastr from "toastr";
 import makeService from "../service/makeService";
 import catagoryService from "../service/catagoryService";
 import CatagoryDropDown from "./CatagoryDropDown";
 import "./HomeHeader.css";
-import { FaBars, FaSignOutAlt, FaTimes, FaUser } from "react-icons/fa";
+import {
+  FaBars,
+  FaSignOutAlt,
+  FaTimes,
+  FaUser,
+} from "react-icons/fa";
 import MakeWithModelsFlyout from "./MakeWithModelsFlyout";
 import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
@@ -17,6 +22,7 @@ function HomeHeader({ value, onChange }) {
   const idOf = (item) => item?.id ?? item?.Id;
   const { items } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -163,7 +169,12 @@ function HomeHeader({ value, onChange }) {
     });
 
     closeMobileMenu();
-    navigate("/browse");
+    navigate(`/browse?categoryId=${idOf(category)}`);
+  };
+
+  const handleCategoryOverview = () => {
+    closeMobileMenu();
+    navigate("/categories");
   };
 
   const handleLoginClick = () => {
@@ -284,19 +295,6 @@ function HomeHeader({ value, onChange }) {
               Browse
             </NavLink>
 
-            <div className="top-selection" aria-label="Part filters">
-              <MakeWithModelsFlyout
-                makes={makes}
-                onSelectMake={handleMakeSelect}
-                onSelectModel={handleModelSelect}
-              />
-
-              <CatagoryDropDown
-                data={categories}
-                onSelect={handleCategorySelect}
-              />
-            </div>
-
             <NavLink
               to="/contact"
               className={({ isActive }) =>
@@ -317,6 +315,21 @@ function HomeHeader({ value, onChange }) {
               About Us
             </NavLink>
           </nav>
+
+          <div className="top-selection" aria-label="Part filters">
+            <MakeWithModelsFlyout
+              makes={makes}
+              onSelectMake={handleMakeSelect}
+              onSelectModel={handleModelSelect}
+            />
+
+            <CatagoryDropDown
+              data={categories}
+              onSelect={handleCategorySelect}
+              onOverview={handleCategoryOverview}
+              isOverviewActive={location.pathname === "/categories"}
+            />
+          </div>
 
           <form onSubmit={submitSearch} className="header-search" role="search">
             <label className="sr-only" htmlFor="site-header-search">

@@ -573,3 +573,47 @@
   margin-top: 12px;
   font-size: 0.95rem;
 }
+
+/* Phase 8: Customer Part Details header and mobile wrapping */
+.apd-header--customer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.apd-header--customer .apd-title {
+  flex: 1 1 480px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.apd-header--customer .apd-title h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.apd-back-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .admin-part-details {
+    padding: 12px;
+  }
+
+  .apd-header--customer {
+    align-items: flex-start;
+  }
+
+  .apd-header--customer .apd-title {
+    flex-basis: 100%;
+  }
+
+  .apd-dl,
+  .apd-dl--stack {
+    grid-template-columns: 1fr;
+  }
+}

@@ -58,6 +58,7 @@ function AddItem() {
 
   const [loadingClone, setLoadingClone] = useState(false);
   const [initialLocationValue, setInitialLocationValue] = useState(null);
+  const [locationSelectorKey, setLocationSelectorKey] = useState(0);
 
   useEffect(() => {
     catagoryService
@@ -100,25 +101,22 @@ function AddItem() {
     let isMounted = true;
     setLoadingClone(true);
 
-    Promise.all([
-      partsService.getPartById(sellSimilarId),
-      partsService
-        .getPartImagesByPartId(sellSimilarId)
-        .catch(() => ({ item: [] })),
-    ])
-      .then(([partRes, imageRes]) => {
+    partsService
+      .getPartById(sellSimilarId)
+      .then((partRes) => {
         if (!isMounted) return;
 
         const sourcePart = partRes?.item;
-        const sourceImages = imageRes?.item || [];
 
         if (!sourcePart) {
           toastr.error("Could not load source part for Sell Similar.");
           return;
         }
 
-        hydrateFromSourcePart(sourcePart, sourceImages);
-        toastr.success("Listing prepopulated from source part.");
+        hydrateFromSourcePart(sourcePart);
+        toastr.success(
+          "Listing details copied. Add new photos and choose a new location.",
+        );
       })
       .catch((err) => {
         console.error("Sell Similar load failed", err);
@@ -229,15 +227,33 @@ function AddItem() {
     setFitments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const buildImageUrl = (img) => {
-    if (!img) return "";
-    if (/^https?:\/\//i.test(img)) return img;
-    return `${partsService.partImageUrl}${img.startsWith("/") ? img : `/${img}`}`;
-  };
-
   const safeString = (value) => (value == null ? "" : String(value));
 
-  const hydrateFromSourcePart = (sourcePart, sourceImages = []) => {
+  const parseYearRange = (value) => {
+    const text = safeString(value).trim().replace(/[–—]/g, "-");
+
+    const match = text.match(/^(\d{4})(?:\s*-\s*(\d{4}))?$/);
+
+    if (!match) return null;
+
+    const yearStart = Number(match[1]);
+    const yearEnd = Number(match[2] || match[1]);
+
+    if (!Number.isInteger(yearStart) || !Number.isInteger(yearEnd)) {
+      return null;
+    }
+
+    if (yearStart > yearEnd) return null;
+
+    return { yearStart, yearEnd };
+  };
+
+  const formatYearRange = (yearStart, yearEnd) =>
+    Number(yearStart) === Number(yearEnd)
+      ? String(yearStart)
+      : `${yearStart} - ${yearEnd}`;
+
+  const hydrateFromSourcePart = (sourcePart) => {
     if (!sourcePart) return;
 
     const categories = Array.isArray(sourcePart.categories)
@@ -248,98 +264,101 @@ function AddItem() {
       ? sourcePart.fitments
       : [];
 
-    const primaryCategoryId =
-      safeString(sourcePart.catagoryId) ||
-      safeString(categories[0]?.catagoryId);
+    const primaryCategoryId = safeString(
+      sourcePart.catagoryId ??
+        sourcePart.catagory?.id ??
+        categories[0]?.catagoryId,
+    );
+
+    const sourcePrimaryMakeId = safeString(
+      sourcePart.makeId ?? sourcePart.make?.id ?? fitmentsRaw[0]?.makeId,
+    );
+
+    const sourcePrimaryModelId = safeString(
+      sourcePart.modelId ??
+        sourcePart.make?.model?.id ??
+        fitmentsRaw.find(
+          (fitment) => safeString(fitment.makeId) === sourcePrimaryMakeId,
+        )?.modelId,
+    );
+
+    const sourceYearRange = parseYearRange(sourcePart.year);
+
+    let primaryFitmentIndex = fitmentsRaw.findIndex((fitment) => {
+      if (safeString(fitment.makeId) !== sourcePrimaryMakeId) return false;
+      if (!sourceYearRange) return true;
+
+      return (
+        Number(fitment.yearStart) === sourceYearRange.yearStart &&
+        Number(fitment.yearEnd) === sourceYearRange.yearEnd
+      );
+    });
+
+    if (primaryFitmentIndex < 0 && fitmentsRaw.length > 0) {
+      primaryFitmentIndex = 0;
+    }
 
     const primaryFitment =
-      fitmentsRaw.find(
-        (f) =>
-          safeString(f.makeId) === safeString(sourcePart.makeId) &&
-          Number(f.yearStart) === Number(f.year) &&
-          Number(f.yearEnd) === Number(f.year),
-      ) || fitmentsRaw[0];
+      primaryFitmentIndex >= 0 ? fitmentsRaw[primaryFitmentIndex] : null;
+
+    const primaryYearText = sourceYearRange
+      ? formatYearRange(sourceYearRange.yearStart, sourceYearRange.yearEnd)
+      : primaryFitment
+        ? formatYearRange(primaryFitment.yearStart, primaryFitment.yearEnd)
+        : safeString(sourcePart.year);
 
     setFormData((prev) => ({
       ...prev,
       name: safeString(sourcePart.name),
-      year: safeString(sourcePart.year),
+      year: primaryYearText,
       partNumber: safeString(sourcePart.partnumber ?? sourcePart.partNumber),
       description: safeString(sourcePart.description),
       price: safeString(sourcePart.price),
       quantity: safeString(sourcePart.quantity ?? "1"),
-      makeId: safeString(sourcePart.makeId ?? primaryFitment?.makeId),
-      modelId: safeString(sourcePart.modelId ?? primaryFitment?.modelId),
+      makeId: sourcePrimaryMakeId,
+      modelId: sourcePrimaryModelId,
       catagoryId: primaryCategoryId,
-      conditionId: safeString(sourcePart.conditionId || "1"),
-      shippingPolicyId: safeString(sourcePart.shippingPolicyId),
-      locationId: safeString(sourcePart.locationId),
+      conditionId: safeString(
+        sourcePart.conditionId ?? sourcePart.condition?.id ?? "1",
+      ),
+      shippingPolicyId: safeString(
+        sourcePart.shippingPolicyId ?? sourcePart.shippingPolicy?.id,
+      ),
+      locationId: "",
       availableId: "1",
-      otherBox: safeString(sourcePart.otherBox ?? sourcePart.OtherBox),
-      adminNotes: safeString(sourcePart.adminNotes ?? sourcePart.AdminNotes),
+      otherBox: "",
+      adminNotes: "",
     }));
 
     setExtraCategories(
       categories
-        .filter((c) => safeString(c.catagoryId) !== primaryCategoryId)
-        .map((c) => ({
-          catagoryId: safeString(c.catagoryId),
+        .filter(
+          (category) =>
+            safeString(category.catagoryId ?? category.id) !==
+            primaryCategoryId,
+        )
+        .map((category) => ({
+          catagoryId: safeString(category.catagoryId ?? category.id),
         })),
     );
-
-    const normalizedPrimaryMakeId = safeString(sourcePart.makeId);
-    const normalizedPrimaryYear = safeString(sourcePart.year);
 
     setFitments(
       fitmentsRaw
-        .filter((f) => {
-          const samePrimary =
-            safeString(f.makeId) === normalizedPrimaryMakeId &&
-            safeString(f.yearStart) === normalizedPrimaryYear &&
-            safeString(f.yearEnd) === normalizedPrimaryYear;
-
-          return !samePrimary;
-        })
-        .map((f) => ({
-          makeId: safeString(f.makeId),
-          modelId: safeString(f.modelId),
-          yearStart: safeString(f.yearStart),
-          yearEnd: safeString(f.yearEnd),
+        .filter((_, index) => index !== primaryFitmentIndex)
+        .map((fitment) => ({
+          makeId: safeString(fitment.makeId),
+          modelId: safeString(fitment.modelId),
+          yearStart: safeString(fitment.yearStart),
+          yearEnd: safeString(fitment.yearEnd),
         })),
     );
 
-    setInitialLocationValue({
-      siteId: sourcePart.siteId ?? sourcePart.location?.site?.id ?? "",
-      areaId: sourcePart.areaId ?? sourcePart.location?.area?.id ?? "",
-      aisleId: sourcePart.aisleId ?? sourcePart.location?.aisle?.id ?? "",
-      shelfId: sourcePart.shelfId ?? sourcePart.location?.shelf?.id ?? "",
-      sectionId: sourcePart.sectionId ?? sourcePart.location?.section?.id ?? "",
-      boxId: sourcePart.boxId ?? sourcePart.location?.box?.id ?? "",
-    });
-
-    if (sourceImages.length > 0) {
-      setGalleryItems(
-        sourceImages.map((img, index) => ({
-          id: `existing-${img.id || index}`,
-          file: null,
-          previewUrl: buildImageUrl(img.url),
-          rotation: 0,
-          isExisting: true,
-        })),
-      );
-      setSelectedIndex(0);
-    } else if (sourcePart.image) {
-      setGalleryItems([
-        {
-          id: `existing-primary-${sourcePart.id}`,
-          file: null,
-          previewUrl: buildImageUrl(sourcePart.image),
-          rotation: 0,
-          isExisting: true,
-        },
-      ]);
-      setSelectedIndex(0);
-    }
+    // Photos and warehouse location are unique to the new physical item.
+    revokePreviewUrls(galleryItemsRef.current);
+    setGalleryItems([]);
+    setSelectedIndex(0);
+    setInitialLocationValue(null);
+    setLocationSelectorKey((value) => value + 1);
   };
 
   const setGalleryFromDropZone = (files) => {
@@ -464,13 +483,17 @@ function AddItem() {
 
   const getFitmentValidationError = () => {
     const normalizedFitments = [];
-    const primaryYear = Number(formData.year);
+    const primaryRange = parseYearRange(formData.year);
 
-    if (formData.makeId && Number.isInteger(primaryYear)) {
+    if (!primaryRange) {
+      return "Year(s) must be a four-digit year or range such as 1972 - 1979.";
+    }
+
+    if (formData.makeId) {
       normalizedFitments.push({
         makeId: String(formData.makeId),
-        yearStart: primaryYear,
-        yearEnd: primaryYear,
+        yearStart: primaryRange.yearStart,
+        yearEnd: primaryRange.yearEnd,
         label: "Primary fitment",
       });
     }
@@ -479,7 +502,10 @@ function AddItem() {
       const fitment = fitments[index];
       const rowNumber = index + 1;
       const hasAnyValue = Boolean(
-        fitment.makeId || fitment.modelId || fitment.yearStart || fitment.yearEnd,
+        fitment.makeId ||
+        fitment.modelId ||
+        fitment.yearStart ||
+        fitment.yearEnd,
       );
 
       if (!hasAnyValue) continue;
@@ -535,7 +561,12 @@ function AddItem() {
     payload.append("Name", formData.name.trim());
     payload.append("CatagoryId", formData.catagoryId);
     payload.append("MakeId", formData.makeId);
-    payload.append("Year", formData.year.trim());
+    const primaryRange = parseYearRange(formData.year);
+    const normalizedYear = primaryRange
+      ? formatYearRange(primaryRange.yearStart, primaryRange.yearEnd)
+      : formData.year.trim();
+
+    payload.append("Year", normalizedYear);
     payload.append("ShippingPolicyId", formData.shippingPolicyId);
     payload.append("PartNumber", formData.partNumber.trim());
     payload.append("Description", formData.description.trim());
@@ -565,19 +596,21 @@ function AddItem() {
       }
     });
 
-    const numericYear = parseInt(formData.year, 10);
     let fitmentIndex = 0;
 
-    if (!Number.isNaN(numericYear) && String(formData.makeId || "").trim()) {
+    if (primaryRange && String(formData.makeId || "").trim()) {
       payload.append(
         `Fitments[${fitmentIndex}].MakeId`,
         String(formData.makeId),
       );
       payload.append(
         `Fitments[${fitmentIndex}].YearStart`,
-        String(numericYear),
+        String(primaryRange.yearStart),
       );
-      payload.append(`Fitments[${fitmentIndex}].YearEnd`, String(numericYear));
+      payload.append(
+        `Fitments[${fitmentIndex}].YearEnd`,
+        String(primaryRange.yearEnd),
+      );
       fitmentIndex++;
     }
 
@@ -798,14 +831,14 @@ function AddItem() {
               </div>
 
               <div>
-                <dt>Primary Year</dt>
+                <dt>Year(s)</dt>
                 <dd>
                   <input
                     name="year"
                     value={formData.year}
                     onChange={handleChange}
                     className="apd-input"
-                    placeholder="e.g. 1987"
+                    placeholder="e.g. 1972 or 1972 - 1979"
                   />
                 </dd>
               </div>
@@ -922,6 +955,7 @@ function AddItem() {
 
             <div className="apd-location-picker">
               <LocationSelector
+                key={locationSelectorKey}
                 onChange={handleLocationChange}
                 initialValue={initialLocationValue}
               />
@@ -1153,13 +1187,6 @@ function AddItem() {
             </div>
           </article>
         </form>
-
-        <aside className="apd-card apd-audit-column">
-          <h3>Audit History</h3>
-          <p className="apd-text">
-            Audit will appear after the part is created.
-          </p>
-        </aside>
       </section>
     </div>
   );

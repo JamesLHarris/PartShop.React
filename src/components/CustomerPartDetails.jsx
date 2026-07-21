@@ -148,6 +148,16 @@ function CustomerPartDetails() {
     }
   };
 
+  const handleContactAboutPart = () => {
+    const searchParams = new URLSearchParams({
+      inquiryType: "parts",
+      partId: String(vm.id),
+      subject: `Question about part ${vm.name}`,
+    });
+
+    navigate(`/contact?${searchParams.toString()}`);
+  };
+
   const handleAdd = () => {
     const cartImage = galleryMain || vm.image;
 
@@ -165,7 +175,7 @@ function CustomerPartDetails() {
 
   return (
     <div className="admin-part-details">
-      <header className="apd-header">
+      <header className="apd-header apd-header--customer">
         <div className="apd-title">
           <h2>{vm.name}</h2>
           {vm.availableStatus && (
@@ -184,6 +194,14 @@ function CustomerPartDetails() {
             </span>
           )}
         </div>
+
+        <button
+          type="button"
+          className="apd-btn apd-btn--outlined apd-back-button"
+          onClick={() => navigate(-1)}
+        >
+          ← Back
+        </button>
       </header>
 
       <section className="apd-grid apd-grid--customer">
@@ -260,6 +278,13 @@ function CustomerPartDetails() {
             >
               Add to Cart
             </button>
+            <button
+              type="button"
+              className="apd-btn apd-btn--outlined"
+              onClick={handleContactAboutPart}
+            >
+              Contact About This Part
+            </button>
           </div>
         </aside>
 
@@ -271,7 +296,7 @@ function CustomerPartDetails() {
               <dd>{vm.partNumber || "—"}</dd>
             </div>
             <div>
-              <dt>Primary Year</dt>
+              <dt>Year(s)</dt>
               <dd>{vm.year || "—"}</dd>
             </div>
             <div>
@@ -348,15 +373,6 @@ function CustomerPartDetails() {
         </article>
       </section>
 
-      <div className="apd-actions" style={{ marginBottom: "20px" }}>
-        <button
-          type="button"
-          className="apd-btn apd-btn--outlined"
-          onClick={() => navigate(-1)}
-        >
-          ← Back
-        </button>
-      </div>
     </div>
   );
 }
