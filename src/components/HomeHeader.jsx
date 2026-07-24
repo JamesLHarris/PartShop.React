@@ -21,7 +21,7 @@ import loginService from "../service/loginService";
 
 function HomeHeader({ value, onChange }) {
   const idOf = (item) => item?.id ?? item?.Id;
-  const { items } = useCart();
+  const { items, registerPendingCheckout } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -158,6 +158,26 @@ function HomeHeader({ value, onChange }) {
   }, []);
 
   useEffect(() => {
+    const handleCheckoutCompleted = () => {
+      toastr.success(
+        "Purchase confirmed. Purchased items were removed from your cart.",
+      );
+    };
+
+    window.addEventListener(
+      "site-checkout-completed",
+      handleCheckoutCompleted,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "site-checkout-completed",
+        handleCheckoutCompleted,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const closeOnDesktop = () => {
       if (window.innerWidth > 900) {
         setMobileMenuOpen(false);
@@ -278,12 +298,17 @@ function HomeHeader({ value, onChange }) {
 
     try {
       const response = await shopifyCheckoutService.createCartCheckout(items);
-      const checkoutUrl = response?.item?.checkoutUrl;
+      const checkout = response?.item;
+      const checkoutUrl = checkout?.checkoutUrl;
+      const checkoutToken = checkout?.checkoutToken;
 
-      if (!checkoutUrl) {
-        throw new Error("Shopify checkout URL was not returned.");
+      if (!checkoutUrl || !checkoutToken) {
+        throw new Error(
+          "Shopify checkout URL or checkout token was not returned.",
+        );
       }
 
+      registerPendingCheckout(checkoutToken, checkout.items);
       window.location.assign(checkoutUrl);
     } catch (error) {
       const apiMessage = error?.response?.data?.errors?.[0];
@@ -391,6 +416,16 @@ function HomeHeader({ value, onChange }) {
               onClick={closeMobileMenu}
             >
               About Us
+            </NavLink>
+
+            <NavLink
+              to="/policies"
+              className={({ isActive }) =>
+                `header-nav-link ${isActive ? "is-active" : ""}`
+              }
+              onClick={closeMobileMenu}
+            >
+              Policies
             </NavLink>
           </nav>
 

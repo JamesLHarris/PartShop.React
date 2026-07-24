@@ -18,6 +18,7 @@ import CustomerReturnRequest from "./components/CustomerReturnRequest";
 import Home from "./components/Home";
 import AdminDiscounts from "./components/AdminDiscounts";
 import CategoryLanding from "./components/CategoryLanding";
+import Policies from "./components/Policies";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
             <Route path="/browse" element={<PartsBrowse />} />
             <Route path="/categories" element={<CategoryLanding />} />
             <Route path="/about" element={<About />} />
+            <Route path="/policies" element={<Policies />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<AdminActions />} />
             <Route path="/admin/add" element={<AddItem />} />

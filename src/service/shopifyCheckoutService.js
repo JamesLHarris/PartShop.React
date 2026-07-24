@@ -1,5 +1,9 @@
 import axios from "axios";
-import { API_HOST_PREFIX, onGlobalError, onGlobalSuccess } from "./serviceHelpers";
+import {
+  API_HOST_PREFIX,
+  onGlobalError,
+  onGlobalSuccess,
+} from "./serviceHelpers";
 
 const endpoint = `${API_HOST_PREFIX}/api/shopify/checkout`;
 
@@ -21,9 +25,17 @@ const createSinglePartCheckout = (partId, quantity = 1) => {
   return createCartCheckout([{ partId, quantity }]);
 };
 
+const getCheckoutStatus = (checkoutToken) => {
+  return axios
+    .get(`${endpoint}/status/${encodeURIComponent(checkoutToken)}`)
+    .then(onGlobalSuccess)
+    .catch(onGlobalError);
+};
+
 const shopifyCheckoutService = {
   createCartCheckout,
   createSinglePartCheckout,
+  getCheckoutStatus,
 };
 
 export default shopifyCheckoutService;

@@ -1,6 +1,8 @@
 .single-item {
   width: 100%;
-  padding: 16px;
+  max-width: 320px;
+  min-width: 0;
+  padding: 0;
   font-size: 1.05rem;
   box-sizing: border-box;
 }
@@ -134,4 +136,22 @@
 .single-item .card .card-footer .btn {
   width: 100%;
   margin-bottom: 4px; /* tiny gap above the spacer */
+}
+
+
+@media (max-width: 420px) {
+  .single-item {
+    max-width: 100%;
+  }
+}
+
+/* Step 22.1: allow cards to use the width assigned by the 10-column grid. */
+@media (min-width: 1800px) {
+  .single-item {
+    max-width: none;
+  }
+
+  .item-image {
+    height: clamp(150px, 9vw, 185px);
+  }
 }

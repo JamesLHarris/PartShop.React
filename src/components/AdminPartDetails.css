@@ -617,3 +617,74 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Client review: condition-dependent customer policy box. */
+.apd-policy-card {
+  grid-column: 2 / -1;
+  border-color: var(--site-border-strong, #4b5869);
+  background: var(--site-surface-secondary, #242c37);
+}
+
+.apd-policy-card--not-working {
+  border-color: rgba(214, 158, 46, 0.68);
+}
+
+.apd-policy-card--new {
+  border-color: rgba(72, 187, 120, 0.52);
+}
+
+.apd-policy-summary {
+  margin: 0 0 12px;
+  color: var(--site-text, #f4f7fb);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.apd-policy-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: var(--site-text-muted, #c2cad5);
+  line-height: 1.5;
+}
+
+.apd-policy-link {
+  color: var(--site-primary, #78a7ff);
+  font-weight: 800;
+}
+
+.apd-policy-link:focus-visible {
+  border-radius: 4px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--site-focus-ring, rgba(79, 140, 255, 0.38));
+}
+
+@media (max-width: 1180px) {
+  .apd-policy-card {
+    grid-column: 1;
+  }
+}
+
+
+/* =========================
+   Add Item client-review layout
+   ========================= */
+
+/* Add Item no longer has an audit sidebar, so let its form use the full page. */
+.apd-add .apd-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Keep Meta in the right-hand form column on desktop. */
+.apd-add .apd-meta {
+  grid-column: 2;
+}
+
+/* Reset the explicit placement when the form collapses to one column. */
+@media (max-width: 980px) {
+  .apd-add .apd-meta {
+    grid-column: auto;
+  }
+}

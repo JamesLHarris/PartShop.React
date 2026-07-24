@@ -1,253 +1,37 @@
-:root {
-  --accent: #3b82f6;
-}
-
 .Order-Wrapper {
-  max-width: 1200px;
-  margin-inline: auto;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-height: auto;
-  justify-content: flex-start;
-  margin-top: 16px;
-  color: #fff;
+  width: min(100% - 32px, 1500px);
+  margin: 0 auto;
+  padding: 30px 0 56px;
+  color: var(--site-text, #f4f7fb);
 }
 
 .Orders-Header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.Orders-Header h2 {
-  margin: 0 0 6px 0;
+.Orders-Eyebrow {
+  margin: 0 0 6px !important;
+  color: var(--site-primary, #4f8cff) !important;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.Orders-Header h1 {
+  margin: 0 0 7px;
+  color: var(--site-text, #fff);
+  font-size: clamp(2rem, 5vw, 2.8rem);
 }
 
 .Orders-Header p {
+  max-width: 760px;
   margin: 0;
-  color: #b8b8b8;
-}
-
-.Orders-Selector {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.Orders-Selector button,
-.btn-sm,
-.btn-xs {
-  appearance: none;
-  -webkit-appearance: none;
-  font: inherit;
-  font-weight: 600;
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 1px solid #444;
-  background: #1f1f1f;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, transform 0.06s ease;
-  position: relative;
-}
-
-.btn-sm:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-.Orders-Selector button::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 0;
-  height: 3px;
-  background: var(--accent, #3b82f6);
-  border-radius: 3px;
-  opacity: 0;
-  transform: scaleX(0.4);
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  pointer-events: none;
-}
-
-.Orders-Selector button:hover::after,
-.Orders-Selector button:focus-visible::after,
-.Orders-Selector .is-active::after {
-  opacity: 1;
-  transform: scaleX(1);
-}
-
-.Orders-Selector button:hover,
-.btn-sm:hover,
-.btn-xs:hover {
-  background: #242424;
-  border-color: #555;
-  transform: translateY(-1px);
-}
-
-.Orders-Selector .is-active {
-  background: #2a2a2a;
-  border-color: #666;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.Orders-Container {
-  padding: 24px;
-  border: 1px solid #444;
-  border-radius: 12px;
-  background: #111;
-  overflow-x: auto;
-}
-
-.Orders-Table,
-.PickListTable {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.Orders-Table thead th,
-.PickListTable thead th {
-  text-align: left;
-  font-weight: 600;
-  padding: 10px 12px;
-  background: #181818;
-  color: #ddd;
-  border-bottom: 1px solid #2a2a2a;
-}
-
-.Orders-Table tbody td,
-.PickListTable tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #232323;
-  vertical-align: top;
-}
-
-.row-open td {
-  background: #161616;
-}
-
-.Order-Details > td {
-  padding: 0;
-  border-bottom: none;
-}
-
-.DetailsCard {
-  margin: 0 8px 12px 8px;
-  padding: 16px;
-  border: 1px solid #2a2a2a;
-  border-radius: 12px;
-  background: #121212;
-}
-
-.DetailsHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-.DetailsMeta,
-.DetailsSubtle {
-  color: #aaa;
-  font-size: 0.9rem;
-}
-
-.badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid #333;
-  background: #202020;
-  color: #ddd;
-  font-size: 0.85rem;
-}
-
-.Orders-Error {
-  border: 1px solid #8a2d2d;
-  background: #2a1212;
-  color: #ffd2d2;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.Orders-Empty {
-  color: #cfcfcf;
-  text-align: center;
-  padding: 24px;
-}
-
-.Orders-Warning {
-  color: #ffcc66;
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-.ImageCell {
-  width: 72px;
-}
-
-.thumb {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid #333;
-  display: grid;
-  place-items: center;
-  cursor: zoom-in;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
-  font-size: 0.7rem;
-  color: #999;
-  text-align: center;
-}
-
-.thumb:hover {
-  transform: translateY(-1px);
-  border-color: #555;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-}
-
-.thumb-empty {
-  background: #181818;
-  cursor: default;
-}
-
-.Lightbox {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  display: grid;
-  place-items: center;
-  z-index: 1000;
-}
-
-.Lightbox img {
-  max-width: 90vw;
-  max-height: 90vh;
-  border-radius: 12px;
-  border: 1px solid #444;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-  background: #111;
-}
-
-@media (max-width: 700px) {
-  .Orders-Header,
-  .DetailsHeader {
-    flex-direction: column;
-  }
-
-  .Order-Wrapper {
-    padding: 16px;
-  }
+  color: var(--site-text-muted, #b9c2ce);
+  line-height: 1.5;
 }
 
 .Orders-HeaderActions {
@@ -257,25 +41,252 @@
   flex-wrap: wrap;
 }
 
+.Orders-Selector {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 22px 0;
+  flex-wrap: wrap;
+}
+
+.Orders-Selector button,
+.btn-sm {
+  appearance: none;
+  position: relative;
+  min-height: 42px;
+  padding: 9px 15px;
+  border: 1px solid var(--site-border-strong, #4b5868);
+  border-radius: var(--site-radius-md, 10px);
+  background: var(--site-surface-secondary, #242c37);
+  color: var(--site-text, #fff);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    background-color var(--site-transition, 160ms ease),
+    border-color var(--site-transition, 160ms ease),
+    transform var(--site-transition, 160ms ease);
+}
+
+.Orders-Selector button:hover,
+.btn-sm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--site-primary, #4f8cff);
+  background: var(--site-surface-hover, #303a47);
+}
+
+.Orders-Selector button:focus-visible,
+.btn-sm:focus-visible,
+.OrderPhoto__button:focus-visible,
+.Lightbox button:focus-visible,
+.Orders-Table a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--site-focus-ring, rgba(79, 140, 255, 0.38));
+}
+
+.Orders-Selector button.is-active,
+.btn-sm:not(.secondary) {
+  border-color: var(--site-primary, #4f8cff);
+  background: var(--site-primary, #4f8cff);
+  color: var(--site-text-on-primary, #fff);
+}
+
 .btn-sm.secondary {
-  opacity: 0.85;
+  background: var(--site-surface-secondary, #242c37);
+}
+
+.btn-sm:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.Orders-Container {
+  overflow-x: auto;
+  border: 1px solid var(--site-border, #374250);
+  border-radius: var(--site-radius-lg, 14px);
+  background: var(--site-surface, #1c222b);
+  box-shadow: var(--site-shadow, 0 10px 28px rgba(0, 0, 0, 0.24));
+}
+
+.Orders-Table,
+.PickListTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.Orders-Table {
+  min-width: 850px;
+}
+
+.Orders-Table th,
+.PickListTable th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--site-border, #374250);
+  background: var(--site-surface-secondary, #242c37);
+  color: var(--site-text-muted, #c5ccd6);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.Orders-Table td,
+.PickListTable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--site-border, #303a47);
+  color: var(--site-text, #f4f7fb);
+  vertical-align: middle;
+}
+
+.Orders-Table tbody > tr:not(.Order-Details):hover td,
+.row-open td {
+  background: var(--site-surface-hover, #29323e);
+}
+
+.Orders-ActionCell {
+  width: 90px;
+  text-align: right;
+}
+
+.Order-Details > td {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.DetailsCard {
+  margin: 0 12px 16px;
+  padding: 18px;
+  border: 1px solid var(--site-border, #374250);
+  border-radius: var(--site-radius-lg, 12px);
+  background: var(--site-input-bg, #111820);
+}
+
+.DetailsHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+
+.DetailsMeta,
+.DetailsSubtle {
+  color: var(--site-text-muted, #aeb8c5);
+  font-size: 0.88rem;
+}
+
+.PickListScroll {
+  overflow-x: auto;
+}
+
+.PickListTable {
+  min-width: 940px;
+}
+
+.PickListTable a {
+  color: var(--site-primary, #78a7ff);
+  font-weight: 750;
+}
+
+.ImageCell {
+  width: 92px;
+}
+
+.OrderPhoto {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+}
+
+.OrderPhoto__button {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.thumb {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--site-border-strong, #4b5868);
+  border-radius: 9px;
+  background: var(--site-surface-secondary, #242c37);
+}
+
+.thumb-empty {
+  display: grid;
+  place-items: center;
+  color: var(--site-text-muted, #aeb8c5);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.OrderPhoto__count {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  min-width: 25px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.OrderPhoto__source {
+  color: var(--site-text-muted, #aeb8c5);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.LocationCell {
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.Orders-Warning {
+  color: var(--site-warning, #ffd98a);
+}
+
+.Orders-Error,
+.Orders-Success,
+.SyncSummary {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--site-radius-md, 10px);
+}
+
+.Orders-Error {
+  border: 1px solid rgba(255, 110, 110, 0.55);
+  background: var(--site-error-bg, #3b1b20);
+  color: var(--site-error, #ffb0b0);
 }
 
 .Orders-Success {
-  margin: 0 0 14px 0;
-  padding: 12px 14px;
-  border: 1px solid #2f6f3f;
-  background: #102416;
-  border-radius: 10px;
-  color: #d6f7dd;
+  border: 1px solid rgba(72, 187, 120, 0.52);
+  background: var(--site-success-bg, #173625);
+  color: var(--site-success, #a9e6be);
 }
 
 .SyncSummary {
-  margin: 0 0 16px 0;
-  padding: 12px 14px;
-  border: 1px solid #333;
-  background: #151515;
-  border-radius: 10px;
+  border: 1px solid var(--site-border, #374250);
+  background: var(--site-surface-secondary, #242c37);
 }
 
 .SyncSummary ul {
@@ -285,5 +296,103 @@
 
 .SyncSummary li {
   margin: 4px 0;
-  color: #ddd;
+  color: var(--site-text-muted, #c5ccd6);
+}
+
+.Orders-Empty {
+  padding: 34px 22px;
+  color: var(--site-text-muted, #c5ccd6);
+  text-align: center;
+}
+
+.Lightbox {
+  position: fixed;
+  z-index: 5000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.Lightbox__dialog {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.Lightbox__dialog img {
+  display: block;
+  max-width: min(92vw, 1100px);
+  max-height: 84vh;
+  border: 1px solid var(--site-border-strong, #536174);
+  border-radius: 12px;
+  background: var(--site-input-bg, #111820);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+}
+
+.Lightbox__close,
+.Lightbox__nav {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  cursor: pointer;
+}
+
+.Lightbox__close {
+  top: 10px;
+  right: 10px;
+  width: 42px;
+  height: 42px;
+  font-size: 27px;
+}
+
+.Lightbox__nav {
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translateY(-50%);
+  font-size: 34px;
+}
+
+.Lightbox__nav--previous {
+  left: 12px;
+}
+
+.Lightbox__nav--next {
+  right: 12px;
+}
+
+.Lightbox__caption {
+  margin-top: 10px;
+  color: #fff;
+  font-weight: 750;
+}
+
+@media (max-width: 760px) {
+  .Order-Wrapper {
+    width: min(100% - 22px, 1500px);
+    padding-top: 20px;
+  }
+
+  .Orders-Header,
+  .DetailsHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .Orders-HeaderActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .Orders-HeaderActions .btn-sm {
+    width: 100%;
+  }
 }

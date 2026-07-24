@@ -115,7 +115,7 @@ function AddItem() {
 
         hydrateFromSourcePart(sourcePart);
         toastr.success(
-          "Listing details copied. Add new photos and choose a new location.",
+          "Listing details copied. Add new photos; the inventory location was carried over.",
         );
       })
       .catch((err) => {
@@ -230,7 +230,9 @@ function AddItem() {
   const safeString = (value) => (value == null ? "" : String(value));
 
   const parseYearRange = (value) => {
-    const text = safeString(value).trim().replace(/[–—]/g, "-");
+    const text = safeString(value)
+      .trim()
+      .replace(/[–—]/g, "-");
 
     const match = text.match(/^(\d{4})(?:\s*-\s*(\d{4}))?$/);
 
@@ -278,7 +280,8 @@ function AddItem() {
       sourcePart.modelId ??
         sourcePart.make?.model?.id ??
         fitmentsRaw.find(
-          (fitment) => safeString(fitment.makeId) === sourcePrimaryMakeId,
+          (fitment) =>
+            safeString(fitment.makeId) === sourcePrimaryMakeId,
         )?.modelId,
     );
 
@@ -324,18 +327,21 @@ function AddItem() {
       shippingPolicyId: safeString(
         sourcePart.shippingPolicyId ?? sourcePart.shippingPolicy?.id,
       ),
-      locationId: "",
+      locationId: safeString(
+        sourcePart.locationId ??
+          sourcePart.location?.id ??
+          sourcePart.location?.box?.id ??
+          sourcePart.boxId,
+      ),
       availableId: "1",
-      otherBox: "",
+      otherBox: safeString(sourcePart.otherBox ?? sourcePart.OtherBox),
       adminNotes: "",
     }));
 
     setExtraCategories(
       categories
-        .filter(
-          (category) =>
-            safeString(category.catagoryId ?? category.id) !==
-            primaryCategoryId,
+        .filter((category) =>
+          safeString(category.catagoryId ?? category.id) !== primaryCategoryId,
         )
         .map((category) => ({
           catagoryId: safeString(category.catagoryId ?? category.id),
@@ -353,11 +359,22 @@ function AddItem() {
         })),
     );
 
-    // Photos and warehouse location are unique to the new physical item.
+    // Photos are unique to the new listing, but the client wants the
+    // existing inventory location carried into Sell Similar.
     revokePreviewUrls(galleryItemsRef.current);
     setGalleryItems([]);
     setSelectedIndex(0);
-    setInitialLocationValue(null);
+
+    setInitialLocationValue({
+      siteId: sourcePart.siteId ?? sourcePart.location?.site?.id ?? "",
+      areaId: sourcePart.areaId ?? sourcePart.location?.area?.id ?? "",
+      aisleId: sourcePart.aisleId ?? sourcePart.location?.aisle?.id ?? "",
+      shelfId: sourcePart.shelfId ?? sourcePart.location?.shelf?.id ?? "",
+      sectionId:
+        sourcePart.sectionId ?? sourcePart.location?.section?.id ?? "",
+      boxId: sourcePart.boxId ?? sourcePart.location?.box?.id ?? "",
+    });
+
     setLocationSelectorKey((value) => value + 1);
   };
 
@@ -502,10 +519,7 @@ function AddItem() {
       const fitment = fitments[index];
       const rowNumber = index + 1;
       const hasAnyValue = Boolean(
-        fitment.makeId ||
-        fitment.modelId ||
-        fitment.yearStart ||
-        fitment.yearEnd,
+        fitment.makeId || fitment.modelId || fitment.yearStart || fitment.yearEnd,
       );
 
       if (!hasAnyValue) continue;

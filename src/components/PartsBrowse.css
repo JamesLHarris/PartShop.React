@@ -8,9 +8,10 @@
 /* Grid for parts */
 .part-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+  justify-content: center;
+  align-items: stretch;
   gap: 24px;
-
   padding: 20px;
 }
 
@@ -97,4 +98,22 @@
 .pageModifier button.active,
 .page-buttons button.active {
   font-weight: 700;
+}
+
+
+/* Client review: keep cards the same width for normal Browse and filtered results. */
+@media (max-width: 420px) {
+  .part-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 12px;
+  }
+}
+
+/* Step 22.1: keep a full 10-item page on one row on wide desktop screens. */
+@media (min-width: 1800px) {
+  .part-grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 14px;
+    padding-inline: 20px;
+  }
 }

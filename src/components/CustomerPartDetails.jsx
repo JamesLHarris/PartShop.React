@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import partsService from "../service/partsService";
 import shopifyCheckoutService from "../service/shopifyCheckoutService";
 import "./AdminPartDetails.css";
@@ -14,6 +14,71 @@ const buildImageUrl = (img) =>
 
 const get = (obj, ...path) =>
   path.reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+
+const getConditionPolicy = (conditionName) => {
+  const normalized = String(conditionName || "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized.includes("not working") ||
+    normalized.includes("for parts") ||
+    normalized.includes("parts only") ||
+    normalized.includes("as-is") ||
+    normalized.includes("as is")
+  ) {
+    return {
+      key: "not-working",
+      title: "Parts / Not Working Policy",
+      summary:
+        "This item is sold as-is for parts, repair, or rebuilding and is not eligible for return.",
+      bullets: [
+        "Review the listing description and all available photos before purchasing.",
+        "The item may be incomplete, damaged, or unsuitable for normal installation.",
+        "Contact GR & Sons before checkout if you need clarification about the item's condition.",
+      ],
+    };
+  }
+
+  if (normalized.includes("new")) {
+    return {
+      key: "new",
+      title: "New Part Policy",
+      summary:
+        "New parts may be considered for return within 30 days of delivery, subject to approval and inspection.",
+      bullets: [
+        "The part must be returned in the condition in which it was received.",
+        "A return request must be approved before the item is sent back.",
+        "Deductions may apply if the returned item is altered, incomplete, or damaged.",
+      ],
+    };
+  }
+
+  if (normalized.includes("used")) {
+    return {
+      key: "used",
+      title: "Used Part Policy",
+      summary:
+        "Used parts may be considered for return within 30 days of delivery, subject to approval and inspection.",
+      bullets: [
+        "Normal signs of prior use, age, and cosmetic wear should be expected.",
+        "A return request must be approved before the item is sent back.",
+        "Deductions may apply when the returned condition differs from the condition at shipment.",
+      ],
+    };
+  }
+
+  return {
+    key: "general",
+    title: "Condition and Return Policy",
+    summary:
+      "Return eligibility depends on the listed condition and requires approval before an item is sent back.",
+    bullets: [
+      "Review the condition, description, photos, and compatibility information before purchasing.",
+      "Contact GR & Sons before checkout if you need clarification.",
+    ],
+  };
+};
 
 function CustomerPartDetails() {
   const { id } = useParams();
@@ -127,6 +192,7 @@ function CustomerPartDetails() {
   }
 
   const galleryMain = activeImage || vm.image;
+  const conditionPolicy = getConditionPolicy(vm.conditionName);
 
   const handleBuyNow = async () => {
     setCheckoutError("");
@@ -370,6 +436,21 @@ function CustomerPartDetails() {
               <div className="apd-empty-note">No compatibility records.</div>
             )}
           </div>
+        </article>
+
+        <article
+          className={`apd-card apd-policy-card apd-policy-card--${conditionPolicy.key}`}
+        >
+          <h3>{conditionPolicy.title}</h3>
+          <p className="apd-policy-summary">{conditionPolicy.summary}</p>
+          <ul className="apd-policy-list">
+            {conditionPolicy.bullets.map((bullet) => (
+              <li key={bullet}>{bullet}</li>
+            ))}
+          </ul>
+          <Link className="apd-policy-link" to="/policies">
+            Review all purchasing and return policies
+          </Link>
         </article>
       </section>
 

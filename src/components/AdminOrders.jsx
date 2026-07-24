@@ -24,15 +24,45 @@ const money = (amount, currencyCode) => {
 
 const formatDate = (value) => {
   if (!value) return "";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
 };
 
-const getErrorMessage = (err, fallback) =>
-  err?.response?.data?.errors?.[0] ||
-  err?.response?.data?.message ||
-  err?.message ||
+const getErrorMessage = (error, fallback) =>
+  error?.response?.data?.errors?.[0] ||
+  error?.response?.data?.message ||
+  error?.message ||
   fallback;
+
+const uniqueUrls = (urls) =>
+  Array.from(
+    new Set(
+      (urls || [])
+        .map((url) => String(url || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+const getItemImages = (item) => {
+  const localImages = uniqueUrls([
+    ...(item?.localPart?.imageUrls || []),
+    item?.localPart?.imageUrl,
+  ]);
+
+  if (localImages.length > 0) {
+    return {
+      urls: localImages,
+      source: "Site API",
+    };
+  }
+
+  const shopifyImages = uniqueUrls([item?.shopifyImageUrl]);
+
+  return {
+    urls: shopifyImages,
+    source: shopifyImages.length > 0 ? "Shopify" : "",
+  };
+};
 
 export default function AdminOrders() {
   const [activeView, setActiveView] = useState("awaitingShipment");
@@ -48,7 +78,7 @@ export default function AdminOrders() {
 
   const activeTab = useMemo(
     () => TABS.find((tab) => tab.view === activeView) || TABS[0],
-    [activeView]
+    [activeView],
   );
 
   useEffect(() => {
@@ -61,11 +91,16 @@ export default function AdminOrders() {
       .getRecent(activeView, 25)
       .then((response) => {
         if (!isMounted) return;
-        setOrders(response.item || []);
+        setOrders(response?.item || []);
       })
-      .catch((err) => {
+      .catch((loadError) => {
         if (!isMounted) return;
-        setError(getErrorMessage(err, "Unable to load Shopify orders."));
+        setError(
+          getErrorMessage(
+            loadError,
+            "Unable to load Shopify orders.",
+          ),
+        );
         setOrders([]);
       })
       .finally(() => {
@@ -77,8 +112,56 @@ export default function AdminOrders() {
     };
   }, [activeView, refreshKey]);
 
+  useEffect(() => {
+    if (!preview) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setPreview(null);
+      }
+
+      if (event.key === "ArrowLeft") {
+        setPreview((current) => {
+          if (!current || current.images.length <= 1) {
+            return current;
+          }
+
+          return {
+            ...current,
+            index:
+              (current.index - 1 + current.images.length) %
+              current.images.length,
+          };
+        });
+      }
+
+      if (event.key === "ArrowRight") {
+        setPreview((current) => {
+          if (!current || current.images.length <= 1) {
+            return current;
+          }
+
+          return {
+            ...current,
+            index: (current.index + 1) % current.images.length,
+          };
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [preview]);
+
   const toggleExpand = (orderId) => {
-    setExpandedId((cur) => (cur === orderId ? null : orderId));
+    setExpandedId((current) =>
+      current === orderId ? null : orderId,
+    );
   };
 
   const refresh = () => {
@@ -95,65 +178,128 @@ export default function AdminOrders() {
     shopifyOrderService
       .syncRecentPaid(25)
       .then((response) => {
-        const result = response.item;
+        const result = response?.item;
+
         setSyncDetails(result);
         setSyncMessage(
-          `Sync complete: ${result?.partsMarkedSold || 0} part(s) marked sold, ${
+          `Sync complete: ${
+            result?.partsMarkedSold || 0
+          } part(s) marked sold, ${
             result?.alreadySyncedCount || 0
-          } already synced, ${result?.skippedCount || 0} skipped.`
+          } already synced, ${
+            result?.skippedCount || 0
+          } skipped.`,
         );
+
         refresh();
       })
-      .catch((err) => {
-        setError(getErrorMessage(err, "Unable to sync Shopify orders."));
+      .catch((syncError) => {
+        setError(
+          getErrorMessage(
+            syncError,
+            "Unable to sync Shopify orders.",
+          ),
+        );
       })
       .finally(() => {
         setIsSyncing(false);
       });
   };
 
+  const openPreview = (images, alt, index = 0) => {
+    if (!images?.length) {
+      return;
+    }
+
+    setPreview({
+      images,
+      alt,
+      index: Math.max(0, Math.min(index, images.length - 1)),
+    });
+  };
+
+  const movePreview = (direction) => {
+    setPreview((current) => {
+      if (!current || current.images.length <= 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        index:
+          (current.index + direction + current.images.length) %
+          current.images.length,
+      };
+    });
+  };
+
   return (
-    <div className="Order-Wrapper">
-      <div className="Orders-Header">
+    <main className="Order-Wrapper">
+      <header className="Orders-Header">
         <div>
-          <h2>Shopify Orders</h2>
+          <p className="Orders-Eyebrow">Administration</p>
+          <h1>Shopify Orders</h1>
           <p>
-            Customer/order details are pulled live from Shopify. Site_2024 only
-            uses Shopify IDs to match sold parts and pick locations.
+            Orders are pulled live from Shopify. Item photos and warehouse
+            locations are matched from the Site_2024 API.
           </p>
         </div>
+
         <div className="Orders-HeaderActions">
-          <button className="btn-sm secondary" onClick={refresh} disabled={isLoading || isSyncing}>
+          <button
+            type="button"
+            className="btn-sm secondary"
+            onClick={refresh}
+            disabled={isLoading || isSyncing}
+          >
             {isLoading ? "Loading..." : "Refresh"}
           </button>
-          <button className="btn-sm" onClick={syncPaidOrders} disabled={isLoading || isSyncing}>
+
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={syncPaidOrders}
+            disabled={isLoading || isSyncing}
+          >
             {isSyncing ? "Syncing..." : "Sync Paid Orders"}
           </button>
         </div>
-      </div>
+      </header>
 
-      {syncMessage && <div className="Orders-Success">{syncMessage}</div>}
+      {syncMessage && (
+        <div className="Orders-Success">{syncMessage}</div>
+      )}
 
       {syncDetails?.items?.length > 0 && (
-        <div className="SyncSummary">
+        <section className="SyncSummary">
           <strong>Last sync</strong>
           <ul>
             {syncDetails.items.slice(0, 8).map((item, index) => (
-              <li key={`${item.shopifyOrderId}-${item.shopifyLineItemId}-${index}`}>
-                {item.orderName}: {item.partId ? `Part #${item.partId}` : "No local part"} — {item.message}
+              <li
+                key={`${item.shopifyOrderId}-${item.shopifyLineItemId}-${index}`}
+              >
+                {item.orderName}:{" "}
+                {item.partId
+                  ? `Part #${item.partId}`
+                  : "No local part"}{" "}
+                — {item.message}
               </li>
             ))}
           </ul>
+
           {syncDetails.items.length > 8 && (
-            <div className="DetailsSubtle">Showing first 8 of {syncDetails.items.length} sync rows.</div>
+            <div className="DetailsSubtle">
+              Showing first 8 of {syncDetails.items.length} sync rows.
+            </div>
           )}
-        </div>
+        </section>
       )}
 
-      <div className="Orders-Selector">
+      <nav className="Orders-Selector" aria-label="Order views">
         {TABS.map((tab) => (
           <button
             key={tab.view}
+            type="button"
             className={tab.view === activeView ? "is-active" : ""}
             onClick={() => {
               setActiveView(tab.view);
@@ -163,15 +309,21 @@ export default function AdminOrders() {
             {tab.label}
           </button>
         ))}
-      </div>
+      </nav>
 
-      <div className="Orders-Container">
+      <section className="Orders-Container">
         {error && <div className="Orders-Error">{error}</div>}
 
-        {!error && isLoading && <div className="Orders-Empty">Loading {activeTab.label}...</div>}
+        {!error && isLoading && (
+          <div className="Orders-Empty">
+            Loading {activeTab.label}...
+          </div>
+        )}
 
         {!error && !isLoading && orders.length === 0 && (
-          <div className="Orders-Empty">No Shopify orders found for {activeTab.label}.</div>
+          <div className="Orders-Empty">
+            No Shopify orders found for {activeTab.label}.
+          </div>
         )}
 
         {!error && orders.length > 0 && (
@@ -183,35 +335,47 @@ export default function AdminOrders() {
                 <th>Items</th>
                 <th>Total</th>
                 <th>Created</th>
-                <th>Payment</th>
-                <th>Fulfillment</th>
-                <th></th>
+                <th aria-label="Actions"></th>
               </tr>
             </thead>
+
             <tbody>
               {orders.map((order) => {
-                const isOpen = expandedId === order.shopifyOrderId;
+                const isOpen =
+                  expandedId === order.shopifyOrderId;
+
                 const itemCount = order.lineItems?.reduce(
                   (sum, item) => sum + (item.quantity || 0),
-                  0
+                  0,
                 );
 
                 return (
                   <React.Fragment key={order.shopifyOrderId}>
                     <tr className={isOpen ? "row-open" : ""}>
-                      <td>{order.name || `#${order.orderNumber}`}</td>
-                      <td>{order.customerDisplayName || order.customerEmail || "Shopify Customer"}</td>
+                      <td>
+                        {order.name || `#${order.orderNumber}`}
+                      </td>
+                      <td>
+                        {order.customerDisplayName ||
+                          order.customerEmail ||
+                          "Shopify Customer"}
+                      </td>
                       <td>{itemCount}</td>
-                      <td>{money(order.totalPrice, order.currencyCode)}</td>
+                      <td>
+                        {money(
+                          order.totalPrice,
+                          order.currencyCode,
+                        )}
+                      </td>
                       <td>{formatDate(order.createdAt)}</td>
-                      <td>
-                        <span className="badge">{order.displayFinancialStatus || "Unknown"}</span>
-                      </td>
-                      <td>
-                        <span className="badge">{order.displayFulfillmentStatus || "Unknown"}</span>
-                      </td>
-                      <td>
-                        <button className="btn-sm" onClick={() => toggleExpand(order.shopifyOrderId)}>
+                      <td className="Orders-ActionCell">
+                        <button
+                          type="button"
+                          className="btn-sm"
+                          onClick={() =>
+                            toggleExpand(order.shopifyOrderId)
+                          }
+                        >
                           {isOpen ? "Hide" : "View"}
                         </button>
                       </td>
@@ -219,84 +383,140 @@ export default function AdminOrders() {
 
                     {isOpen && (
                       <tr className="Order-Details">
-                        <td colSpan={8}>
+                        <td colSpan={6}>
                           <div className="DetailsCard">
                             <div className="DetailsHeader">
                               <div>
                                 <strong>{order.name}</strong>
-                                <span className="DetailsSubtle"> Shopify ID: {order.shopifyOrderId}</span>
+                                <span className="DetailsSubtle">
+                                  {" "}
+                                  Shopify ID: {order.shopifyOrderId}
+                                </span>
                               </div>
+
                               <div className="DetailsMeta">
-                                {itemCount} item(s) • {money(order.totalPrice, order.currencyCode)}
+                                {itemCount} item(s) •{" "}
+                                {money(
+                                  order.totalPrice,
+                                  order.currencyCode,
+                                )}
                               </div>
                             </div>
 
-                            <table className="PickListTable">
-                              <thead>
-                                <tr>
-                                  <th>Photo</th>
-                                  <th>SKU</th>
-                                  <th>Shopify Item</th>
-                                  <th>Local Part</th>
-                                  <th>Qty</th>
-                                  <th>Status</th>
-                                  <th>Location</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(order.lineItems || []).map((item) => {
-                                  const local = item.localPart;
-                                  const imageUrl = local?.imageUrl || item.shopifyImageUrl;
+                            <div className="PickListScroll">
+                              <table className="PickListTable">
+                                <thead>
+                                  <tr>
+                                    <th>Photo</th>
+                                    <th>SKU</th>
+                                    <th>Shopify Item</th>
+                                    <th>Local Part</th>
+                                    <th>Qty</th>
+                                    <th>Location</th>
+                                  </tr>
+                                </thead>
 
-                                  return (
-                                    <tr key={item.shopifyLineItemId || item.shopifyLineItemGid}>
-                                      <td className="ImageCell">
-                                        {imageUrl ? (
-                                          <img
-                                            className="thumb"
-                                            src={imageUrl}
-                                            alt={item.title}
-                                            loading="lazy"
-                                            onClick={() => setPreview({ src: imageUrl, alt: item.title })}
-                                          />
-                                        ) : (
-                                          <div className="thumb thumb-empty">No Photo</div>
-                                        )}
-                                      </td>
-                                      <td className="mono">{item.sku || "—"}</td>
-                                      <td>
-                                        <div>{item.title}</div>
-                                        <div className="DetailsSubtle">
-                                          Variant: {item.shopifyVariantId || "not found"}
-                                        </div>
-                                      </td>
-                                      <td>
-                                        {local ? (
-                                          <a
-                                            href={`/admin/part/${local.partId}`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                          >
-                                            #{local.partId} {local.partName || local.partNumber}
-                                          </a>
-                                        ) : (
-                                          <span className="Orders-Warning">No local match</span>
-                                        )}
-                                      </td>
-                                      <td>{item.quantity}</td>
-                                      <td>
-                                        {local ? (
-                                          <span className="badge">{local.availableStatus || "Unknown"}</span>
-                                        ) : (
-                                          "—"
-                                        )}
-                                      </td>
-                                      <td className="mono">{local?.locationCode || "—"}</td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
+                                <tbody>
+                                  {(order.lineItems || []).map(
+                                    (item) => {
+                                      const local = item.localPart;
+                                      const imageInfo =
+                                        getItemImages(item);
+                                      const imageUrl =
+                                        imageInfo.urls[0];
+
+                                      return (
+                                        <tr
+                                          key={
+                                            item.shopifyLineItemId ||
+                                            item.shopifyLineItemGid
+                                          }
+                                        >
+                                          <td className="ImageCell">
+                                            {imageUrl ? (
+                                              <div className="OrderPhoto">
+                                                <button
+                                                  type="button"
+                                                  className="OrderPhoto__button"
+                                                  onClick={() =>
+                                                    openPreview(
+                                                      imageInfo.urls,
+                                                      item.title,
+                                                    )
+                                                  }
+                                                  aria-label={`View ${item.title} photos`}
+                                                >
+                                                  <img
+                                                    className="thumb"
+                                                    src={imageUrl}
+                                                    alt={item.title}
+                                                    loading="lazy"
+                                                  />
+
+                                                  {imageInfo.urls.length >
+                                                    1 && (
+                                                    <span className="OrderPhoto__count">
+                                                      +
+                                                      {imageInfo.urls
+                                                        .length - 1}
+                                                    </span>
+                                                  )}
+                                                </button>
+
+                                                <span className="OrderPhoto__source">
+                                                  {imageInfo.source}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <div className="thumb thumb-empty">
+                                                No Photo
+                                              </div>
+                                            )}
+                                          </td>
+
+                                          <td className="mono">
+                                            {item.sku || "—"}
+                                          </td>
+
+                                          <td>
+                                            <div>{item.title}</div>
+                                            <div className="DetailsSubtle">
+                                              Variant:{" "}
+                                              {item.shopifyVariantId ||
+                                                "not found"}
+                                            </div>
+                                          </td>
+
+                                          <td>
+                                            {local ? (
+                                              <a
+                                                href={`/admin/part/${local.partId}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                              >
+                                                #{local.partId}{" "}
+                                                {local.partName ||
+                                                  local.partNumber}
+                                              </a>
+                                            ) : (
+                                              <span className="Orders-Warning">
+                                                No local match
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          <td>{item.quantity}</td>
+
+                                          <td className="mono LocationCell">
+                                            {local?.locationCode || "—"}
+                                          </td>
+                                        </tr>
+                                      );
+                                    },
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -307,15 +527,65 @@ export default function AdminOrders() {
             </tbody>
           </table>
         )}
-      </div>
+      </section>
 
       {preview && (
-        <div className="Lightbox" onClick={() => setPreview(null)}>
-          <img src={preview.src} alt={preview.alt} />
+        <div
+          className="Lightbox"
+          onClick={() => setPreview(null)}
+          role="presentation"
+        >
+          <div
+            className="Lightbox__dialog"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${preview.alt} photo preview`}
+          >
+            <button
+              type="button"
+              className="Lightbox__close"
+              onClick={() => setPreview(null)}
+              aria-label="Close photo preview"
+            >
+              ×
+            </button>
+
+            {preview.images.length > 1 && (
+              <button
+                type="button"
+                className="Lightbox__nav Lightbox__nav--previous"
+                onClick={() => movePreview(-1)}
+                aria-label="Previous photo"
+              >
+                ‹
+              </button>
+            )}
+
+            <img
+              src={preview.images[preview.index]}
+              alt={`${preview.alt} ${preview.index + 1}`}
+            />
+
+            {preview.images.length > 1 && (
+              <button
+                type="button"
+                className="Lightbox__nav Lightbox__nav--next"
+                onClick={() => movePreview(1)}
+                aria-label="Next photo"
+              >
+                ›
+              </button>
+            )}
+
+            <div className="Lightbox__caption">
+              {preview.index + 1} of {preview.images.length}
+            </div>
+          </div>
         </div>
       )}
 
       <Outlet />
-    </div>
+    </main>
   );
 }

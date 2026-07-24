@@ -172,6 +172,18 @@ const publishShopifyProduct = (partId) => {
   return axios(config);
 };
 
+const syncShopifyProduct = (partId) => {
+  const config = {
+    method: "POST",
+    url: `${homeEndpoint}/${partId}/shopify/sync`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config);
+};
+
 const unpublishShopifyProduct = (partId) => {
   const config = {
     method: "POST",
@@ -199,6 +211,7 @@ const partsService = {
   getByCategoryCustomer,
   getByModelCustomer,
   publishShopifyProduct,
+  syncShopifyProduct,
   unpublishShopifyProduct,
   partImageUrl,
 };

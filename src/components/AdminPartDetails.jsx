@@ -24,6 +24,7 @@ function AdminPartDetails() {
   const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
   const [availabilityOptions, setAvailabilityOptions] = useState([]);
   const [isPublishingShopify, setIsPublishingShopify] = useState(false);
+  const [isSyncingShopify, setIsSyncingShopify] = useState(false);
   const [isUnpublishingShopify, setIsUnpublishingShopify] = useState(false);
   const [shopifyPublishMessage, setShopifyPublishMessage] = useState("");
   const [shopifyPublishError, setShopifyPublishError] = useState("");
@@ -120,7 +121,7 @@ function AdminPartDetails() {
     }
 
     const confirmed = window.confirm(
-      "Publish this part to Shopify? This will make the Shopify product active.",
+      "Publish this part to Shopify? This will sync its current quantity and photos, then make the product active.",
     );
 
     if (!confirmed) {
@@ -137,7 +138,11 @@ function AdminPartDetails() {
         const result = response.data.item;
 
         setShopifyPublishMessage(
-          `Published to Shopify. Status: ${result.status || "ACTIVE"}`,
+          `Published to Shopify. Status: ${
+            result.status || "ACTIVE"
+          }. Quantity: ${result.inventoryQuantity ?? 0}. Photos added: ${
+            result.imagesAdded ?? 0
+          }; already synced: ${result.imagesSkipped ?? 0}.`,
         );
 
         // Optional: reload details so any UI state refreshes.
@@ -154,6 +159,44 @@ function AdminPartDetails() {
       })
       .finally(() => {
         setIsPublishingShopify(false);
+      });
+  };
+
+  const onSyncWithShopifyClicked = () => {
+    if (!part?.id) {
+      return;
+    }
+
+    setIsSyncingShopify(true);
+    setShopifyPublishMessage("");
+    setShopifyPublishError("");
+
+    partsService
+      .syncShopifyProduct(part.id)
+      .then((response) => {
+        const result = response.data.item;
+        const inventory = result.inventory || {};
+        const media = result.media || {};
+
+        setShopifyPublishMessage(
+          `Shopify sync complete. Quantity: ${
+            inventory.quantity ?? vm.quantity ?? 0
+          }. Photos added: ${media.imagesAdded ?? 0}; already synced: ${
+            media.imagesSkipped ?? 0
+          }.`,
+        );
+      })
+      .catch((error) => {
+        const message =
+          error?.response?.data?.errors?.[0] ||
+          error?.response?.data?.message ||
+          error.message ||
+          "Unable to sync with Shopify.";
+
+        setShopifyPublishError(message);
+      })
+      .finally(() => {
+        setIsSyncingShopify(false);
       });
   };
 
@@ -331,8 +374,24 @@ function AdminPartDetails() {
     setSaving(true);
 
     try {
-      await partsService.patchPart(payload, vm.id);
-      toastr.success("Saved.");
+      const response = await partsService.patchPart(payload, vm.id);
+      const result = response?.item;
+
+      if (result?.shopifySyncAttempted && !result.shopifySyncSucceeded) {
+        toastr.warning(
+          result.warning ||
+            "Saved locally, but Shopify inventory did not sync.",
+        );
+      } else if (result?.shopifySyncSucceeded) {
+        toastr.success(
+          `Saved. Shopify quantity synced to ${
+            result.shopifyQuantity ?? payload.quantity
+          }.`,
+        );
+      } else {
+        toastr.success("Saved.");
+      }
+
       await refresh();
       setAuditRefreshToken((t) => t + 1);
     } catch (e) {
@@ -405,6 +464,19 @@ function AdminPartDetails() {
             disabled={isPublishingShopify || !part?.shopifyProductId}
           >
             {isPublishingShopify ? "Publishing..." : "Publish to Shopify"}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-outline-info"
+            onClick={onSyncWithShopifyClicked}
+            disabled={
+              isSyncingShopify ||
+              isPublishingShopify ||
+              !part?.shopifyProductId
+            }
+          >
+            {isSyncingShopify ? "Syncing..." : "Sync with Shopify"}
           </button>
 
           <button

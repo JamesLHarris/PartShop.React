@@ -1,132 +1,128 @@
 import React from "react";
-import { Card } from "react-bootstrap";
-import "./admin-actions.css";
-import addItem from "../itemPhotos/add_item.png";
-import findItem from "../itemPhotos/find-icon.jpg";
-import editItem from "../itemPhotos/edit_item.png";
-import moveItem from "../itemPhotos/move_item.jpg";
 import { useNavigate } from "react-router-dom";
+import "./admin-actions.css";
+
+const AddPartIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+const RefundIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M9 7H5v-4" />
+    <path d="M5.5 7.5A8 8 0 1 1 4 14" />
+    <path d="M12 8v8" />
+    <path d="M15 10.25c0-1.15-1.34-2.08-3-2.08s-3 .93-3 2.08 1.34 2.08 3 2.08 3 .93 3 2.08-1.34 2.08-3 2.08-3-.93-3-2.08" />
+  </svg>
+);
+
+const DiscountIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 13.5 13.5 20a2.12 2.12 0 0 1-3 0L4 13.5V4h9.5L20 10.5a2.12 2.12 0 0 1 0 3Z" />
+    <circle cx="9" cy="9" r="1.25" />
+    <path d="m9 15 6-6" />
+    <circle cx="15" cy="15" r="1.25" />
+  </svg>
+);
+
+const LocateIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m16 16 4.5 4.5" />
+    <path d="M11 8v6M8 11h6" />
+  </svg>
+);
+
+const OrdersIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M6 3h12v18H6z" />
+    <path d="M9 7h6M9 11h6M9 15h4" />
+    <path d="M9 3v2M15 3v2" />
+  </svg>
+);
+
+const ACTIONS = [
+  {
+    key: "add",
+    title: "Add New Part",
+    description: "Create a new inventory listing and prepare it for Shopify.",
+    buttonText: "Add",
+    route: "/admin/add",
+    icon: AddPartIcon,
+  },
+  {
+    key: "refunds",
+    title: "Refund Requests",
+    description: "Review customer return requests and refund activity.",
+    buttonText: "Review",
+    route: "/admin/refunds",
+    icon: RefundIcon,
+  },
+  {
+    key: "discounts",
+    title: "Discount Codes",
+    description: "Create, publish, review, and deactivate discount codes.",
+    buttonText: "Manage",
+    route: "/admin/discounts",
+    icon: DiscountIcon,
+  },
+  {
+    key: "locate",
+    title: "Locate Part",
+    description: "Search inventory and find the current warehouse location.",
+    buttonText: "Locate",
+    route: "/Admin/Search",
+    icon: LocateIcon,
+  },
+  {
+    key: "orders",
+    title: "Orders",
+    description: "View Shopify orders, item details, and pick information.",
+    buttonText: "View",
+    route: "/Admin/Orders",
+    icon: OrdersIcon,
+  },
+];
 
 function AdminActions() {
   const navigate = useNavigate();
 
-  const addPart = () => {
-    navigate("add");
-    console.log("Admin Add");
-  };
-
-  const refundRequests = () => {
-    navigate("/admin/refunds");
-    console.log("Admin Refund Requests");
-  };
-
-  const discounts = () => {
-    navigate("/admin/discounts");
-    console.log("Admin Discounts");
-  };
-
-  const locatePart = () => {
-    navigate("Search");
-    console.log("Admin Locate");
-  };
-
-  const partOrders = () => {
-    navigate("Orders");
-    console.log("Admin Orders");
-  };
-
   return (
-    <div className="action-container">
-      <div className="admin-action">
-        <Card className="action-1">
-          <Card.Body>
-            <Card.Title>
-              <img src={addItem} className="action-image" alt="add" />
-            </Card.Title>
-            <Card.Text></Card.Text>
-            <hr className="admin-divider" />
-          </Card.Body>
-          <Card.Footer>
-            <p className="admin-footer">Add New Part</p>
-            <button className="admin-button" onClick={addPart}>
-              Add
-            </button>
-          </Card.Footer>
-        </Card>
-      </div>
+    <main className="admin-actions-page" aria-labelledby="admin-actions-title">
+      <header className="admin-actions-heading">
+        <p className="admin-actions-eyebrow">Administration</p>
+        <h1 id="admin-actions-title">Admin Action Panel</h1>
+        <p>Choose an inventory, order, discount, or refund workflow.</p>
+      </header>
 
-      <div className="admin-action">
-        <Card className="action-2">
-          <Card.Body>
-            <Card.Title>
-              <img src={moveItem} className="action-image" alt="refunds" />
-            </Card.Title>
-            <Card.Text></Card.Text>
-            <hr className="admin-divider" />
-          </Card.Body>
-          <Card.Footer>
-            <p className="admin-footer">Refund Requests</p>
-            <button className="admin-button" onClick={refundRequests}>
-              Review
-            </button>
-          </Card.Footer>
-        </Card>
-      </div>
+      <section className="action-container" aria-label="Admin actions">
+        {ACTIONS.map((action) => {
+          const Icon = action.icon;
 
-      <div className="admin-action">
-        <Card className="action-3">
-          <Card.Body>
-            <Card.Title>
-              <img src={editItem} className="action-image" alt="discounts" />
-            </Card.Title>
-            <Card.Text></Card.Text>
-            <hr className="admin-divider" />
-          </Card.Body>
-          <Card.Footer>
-            <p className="admin-footer">Discount Codes</p>
-            <button className="admin-button" onClick={discounts}>
-              Manage
-            </button>
-          </Card.Footer>
-        </Card>
-      </div>
+          return (
+            <article className="admin-action" key={action.key}>
+              <div className="admin-action__icon">
+                <Icon />
+              </div>
 
-      <div className="admin-action">
-        <Card className="action-4">
-          <Card.Body>
-            <Card.Title>
-              <img src={findItem} className="action-image" alt="find" />
-            </Card.Title>
-            <Card.Text></Card.Text>
-            <hr className="admin-divider" />
-          </Card.Body>
-          <Card.Footer>
-            <p className="admin-footer">Locate Part</p>
-            <button className="admin-button" onClick={locatePart}>
-              Locate
-            </button>
-          </Card.Footer>
-        </Card>
-      </div>
+              <div className="admin-action__content">
+                <h2>{action.title}</h2>
+                <p>{action.description}</p>
+              </div>
 
-      <div className="admin-action">
-        <Card className="action-4">
-          <Card.Body>
-            <Card.Title>
-              <img src={editItem} className="action-image" alt="orders" />
-            </Card.Title>
-            <Card.Text></Card.Text>
-            <hr className="admin-divider" />
-          </Card.Body>
-          <Card.Footer>
-            <p className="admin-footer">Orders</p>
-            <button className="admin-button" onClick={partOrders}>
-              Edit
-            </button>
-          </Card.Footer>
-        </Card>
-      </div>
-    </div>
+              <button
+                type="button"
+                className="admin-button"
+                onClick={() => navigate(action.route)}
+              >
+                {action.buttonText}
+              </button>
+            </article>
+          );
+        })}
+      </section>
+    </main>
   );
 }
 

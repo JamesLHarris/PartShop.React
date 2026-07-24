@@ -1,0 +1,382 @@
+.locate-part-page {
+  width: min(100% - 32px, 1800px);
+  margin: 0 auto;
+  padding: 28px 0 54px;
+  color: var(--site-text, #f4f7fb);
+}
+
+.locate-part-search-card,
+.locate-part-results {
+  border: 1px solid var(--site-border, #374250);
+  border-radius: var(--site-radius-lg, 14px);
+  background: var(--site-surface, #1c222b);
+  box-shadow: var(--site-shadow, 0 10px 28px rgba(0, 0, 0, 0.24));
+}
+
+.locate-part-search-card {
+  padding: clamp(20px, 4vw, 30px);
+}
+
+.locate-part-heading {
+  margin-bottom: 22px;
+}
+
+.locate-part-eyebrow {
+  margin: 0 0 6px;
+  color: var(--site-primary, #4f8cff);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.locate-part-heading h1 {
+  margin: 0 0 7px;
+  color: var(--site-text, #fff);
+  font-size: clamp(1.9rem, 5vw, 2.55rem);
+}
+
+.locate-part-heading p,
+.locate-part-result-count {
+  margin: 0;
+  color: var(--site-text-muted, #b9c2ce);
+  line-height: 1.5;
+}
+
+.locate-part-form {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1fr)
+    minmax(220px, 1fr)
+    auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.locate-part-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--site-text, #f4f7fb);
+  font-weight: 750;
+}
+
+.locate-part-form input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--site-border-strong, #4a5666);
+  border-radius: var(--site-radius-md, 10px);
+  background: var(--site-input-bg, #10161e);
+  color: var(--site-text, #fff);
+  font: inherit;
+}
+
+.locate-part-form input:focus,
+.locate-part-actions button:focus-visible,
+.locate-part-page-size button:focus-visible {
+  border-color: var(--site-primary, #4f8cff);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--site-focus-ring, rgba(79, 140, 255, 0.35));
+}
+
+.locate-part-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.locate-part-actions button,
+.locate-part-page-size button {
+  min-height: 46px;
+  border: 1px solid transparent;
+  border-radius: var(--site-radius-md, 10px);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.locate-part-search-button {
+  min-width: 120px;
+  padding: 10px 18px;
+  background: var(--site-primary, #4f8cff);
+  color: var(--site-text-on-primary, #fff);
+}
+
+.locate-part-search-button:hover:not(:disabled) {
+  background: var(--site-primary-hover, #3976df);
+}
+
+.locate-part-clear-button {
+  padding: 10px 15px;
+  border-color: var(--site-border-strong, #4a5666) !important;
+  background: transparent;
+  color: var(--site-text, #fff);
+}
+
+.locate-part-clear-button:hover:not(:disabled) {
+  background: var(--site-surface-hover, #2d3642);
+}
+
+.locate-part-actions button:disabled,
+.locate-part-page-size button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.locate-part-results {
+  margin-top: 22px;
+  padding: 20px 0 24px;
+}
+
+.locate-part-results-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid var(--site-border, #374250);
+}
+
+.locate-part-results-header h2 {
+  margin: 0 0 4px;
+  color: var(--site-text, #fff);
+  font-size: 1.35rem;
+}
+
+.locate-part-page-size {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--site-text-muted, #b9c2ce);
+  font-size: 0.9rem;
+}
+
+.locate-part-page-size > div {
+  display: flex;
+  gap: 6px;
+}
+
+.locate-part-page-size button {
+  min-width: 42px;
+  min-height: 36px;
+  padding: 6px 9px;
+  border-color: var(--site-border-strong, #4a5666);
+  background: var(--site-surface-secondary, #252d38);
+  color: var(--site-text, #fff);
+}
+
+.locate-part-page-size button.active {
+  border-color: var(--site-primary, #4f8cff);
+  background: var(--site-primary, #4f8cff);
+  color: var(--site-text-on-primary, #fff);
+}
+
+.locate-part-message {
+  margin: 20px;
+  padding: 28px 20px;
+  border: 1px dashed var(--site-border-strong, #4a5666);
+  border-radius: var(--site-radius-md, 10px);
+  color: var(--site-text-muted, #b9c2ce);
+  text-align: center;
+}
+
+.locate-part-empty-state {
+  color: var(--site-text, #fff);
+}
+
+.locate-part-grid {
+  padding-top: 22px;
+}
+
+.locate-part-pagination {
+  margin-bottom: 0;
+}
+
+/* Admin-only result information displayed inside the standard card. */
+.admin-card-summary {
+  display: grid;
+  width: 100%;
+  color: var(--site-text-muted, #c3cad3);
+  text-align: left;
+}
+
+.admin-card-summary strong {
+  color: var(--site-text, #fff);
+}
+
+.admin-card-location {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+@media (max-width: 850px) {
+  .locate-part-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .locate-part-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .locate-part-page {
+    width: min(100% - 22px, 1800px);
+    padding-top: 18px;
+  }
+
+  .locate-part-form {
+    grid-template-columns: 1fr;
+  }
+
+  .locate-part-actions {
+    grid-column: auto;
+  }
+
+  .locate-part-actions button {
+    flex: 1;
+  }
+
+  .locate-part-results-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .locate-part-page-size {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* =========================
+   Locate Part compact card correction
+   ========================= */
+
+/*
+ * Locate Part cards contain more admin metadata than customer Browse cards.
+ * These overrides compact only the admin search cards so all ten cards remain
+ * the same height and the footer/button never falls outside the card.
+ */
+.locate-part-grid .admin-search-card .card {
+  height: 430px;
+  min-height: 430px;
+  padding-bottom: 8px;
+}
+
+.locate-part-grid .admin-search-card .card-body {
+  min-height: 0;
+  padding: 11px 12px 4px;
+}
+
+.locate-part-grid .admin-search-card .card-title {
+  margin-bottom: 8px;
+}
+
+.locate-part-grid .admin-search-card .item-image {
+  height: 158px;
+}
+
+.locate-part-grid .admin-search-card .card-info-wrapper {
+  gap: 2px;
+}
+
+.locate-part-grid .admin-search-card .card-text {
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
+
+.locate-part-grid .admin-search-card .card-price {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.locate-part-grid .admin-card-summary {
+  gap: 1px;
+  margin-top: 5px;
+  font-size: 0.69rem;
+  line-height: 1.18;
+}
+
+.locate-part-grid .admin-card-location {
+  -webkit-line-clamp: 2;
+}
+
+.locate-part-grid .admin-search-card .card-divider {
+  margin: 7px 0 0;
+}
+
+.locate-part-grid .admin-search-card .card > .card-footer {
+  gap: 7px;
+  min-height: 84px;
+  padding: 6px 12px 0 !important;
+}
+
+.locate-part-grid .admin-search-card .card > .card-footer::after {
+  height: 6px;
+}
+
+.locate-part-grid .admin-search-card .part-name {
+  min-height: 34px;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.locate-part-grid .admin-search-card .card-button {
+  min-height: 32px;
+  padding: 6px 10px;
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+/* Give each grid row enough breathing room without making cards feel long. */
+.locate-part-grid {
+  row-gap: 18px;
+}
+
+@media (min-width: 1800px) {
+  .locate-part-grid .admin-search-card .card {
+    height: 420px;
+    min-height: 420px;
+  }
+
+  .locate-part-grid .admin-search-card .item-image {
+    height: 150px;
+  }
+
+  .locate-part-grid .admin-card-summary {
+    font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .locate-part-grid .admin-search-card .card {
+    height: 450px;
+    min-height: 450px;
+  }
+
+  .locate-part-grid .admin-search-card .item-image {
+    height: 180px;
+  }
+}
+
+@media (max-width: 620px) {
+  .locate-part-grid .admin-search-card .card {
+    height: 470px;
+    min-height: 470px;
+  }
+
+  .locate-part-grid .admin-search-card .item-image {
+    height: 205px;
+  }
+
+  .locate-part-grid .admin-card-summary {
+    font-size: 0.78rem;
+  }
+
+  .locate-part-grid .admin-search-card .part-name {
+    font-size: 0.92rem;
+  }
+}

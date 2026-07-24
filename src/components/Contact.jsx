@@ -232,17 +232,21 @@ function Contact() {
 
           <div className="contact-info-line">
             <strong>Phone:</strong>
-            <span>Contact Phone</span>
+            <a href="tel:+19498610516">1 (949) 861-0516</a>
           </div>
 
           <div className="contact-info-line">
             <strong>Email:</strong>
-            <span>Contact Email</span>
+            <a href="mailto:GRandSonsparts@gmail.com">
+              GRandSonsparts@gmail.com
+            </a>
           </div>
 
           <div className="contact-info-line">
-            <strong>Address:</strong>
-            <span>Contact Address</span>
+            <strong>Mailing Address:</strong>
+            <span>GR&amp;Sons (dporschepartsman)</span>
+            <span>30025 Alicia Pkwy #563</span>
+            <span>Laguna Niguel, CA 92677</span>
           </div>
         </aside>
       </section>

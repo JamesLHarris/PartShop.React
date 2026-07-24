@@ -12,7 +12,7 @@ function Layout() {
   });
 
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const pageSizes = [10, 20, 30];
 
   // Allow category cards to create a shareable/reload-safe Browse URL.
