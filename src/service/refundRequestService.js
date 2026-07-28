@@ -96,6 +96,146 @@ const updateRefundRequestStatus = (id, payload) => {
 };
 
 
+
+const getShopifyOrderForRefund = (id) => {
+  const config = {
+    method: "GET",
+    url: `${endpoint}/${id}/shopify-order`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const matchShopifyItems = (id, items) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/match-shopify-items`,
+    data: { items },
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const getRefundEligibility = (id) => {
+  const config = {
+    method: "GET",
+    url: `${endpoint}/${id}/eligibility`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const applyRefundDecision = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/decision`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const sendRefundDecisionEmail = (id) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/decision-email`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const saveReturnLabel = (id, formData) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/return-label`,
+    data: formData,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "multipart/form-data" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const sendReturnLabelEmail = (id) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/return-label-email`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const updateReturnTracking = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/return-tracking`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const markReturnDelivered = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/return-delivered`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const markReturnItemReceived = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/item-received`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const completeReturnInspection = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/inspection`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
 const submitCustomerReturnRequest = (formData) => {
   const config = {
     method: "POST",
@@ -116,6 +256,17 @@ const refundRequestsService = {
   getRefundRequestsPaginated,
   getReturnReasons,
   getReturnStatuses,
+  getShopifyOrderForRefund,
+  matchShopifyItems,
+  getRefundEligibility,
+  applyRefundDecision,
+  sendRefundDecisionEmail,
+  saveReturnLabel,
+  sendReturnLabelEmail,
+  updateReturnTracking,
+  markReturnDelivered,
+  markReturnItemReceived,
+  completeReturnInspection,
   updateRefundRequestStatus,
 };
 

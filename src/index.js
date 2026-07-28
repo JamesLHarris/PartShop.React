@@ -5,6 +5,27 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import "bootstrap/dist/css/bootstrap.css";
 import "./theme.css";
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
+
+toastr.options = {
+  closeButton: true,
+  progressBar: true,
+  newestOnTop: true,
+  preventDuplicates: true,
+  positionClass: "toast-top-left",
+
+  timeOut: 4500,
+  extendedTimeOut: 1500,
+
+  showDuration: 200,
+  hideDuration: 200,
+  showMethod: "fadeIn",
+  hideMethod: "fadeOut",
+
+  tapToDismiss: true,
+  escapeHtml: true,
+};
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

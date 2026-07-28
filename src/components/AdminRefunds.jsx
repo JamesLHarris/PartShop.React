@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import toastr from "toastr";
 import refundRequestsService from "../service/refundRequestService";
+import AdminRefundDecisionPanel from "./AdminRefundDecisionPanel";
+import AdminRefundShippingPanel from "./AdminRefundShippingPanel";
+import AdminRefundInspectionPanel from "./AdminRefundInspectionPanel";
 import { API_HOST_PREFIX } from "../service/serviceHelpers";
 import "./AdminRefunds.css";
 
@@ -17,6 +20,8 @@ const initialCreateForm = {
   shopifyOrderId: "",
   orderNumber: "",
   customerEmail: "",
+  requestedPartName: "",
+  requestedQuantity: "1",
   returnReasonId: "",
   reason: "",
   notes: "",
@@ -28,13 +33,6 @@ const initialFilters = {
   shopifyOrderId: "",
   orderNumber: "",
   customerEmail: "",
-};
-
-const initialStatusForm = {
-  status: "",
-  notes: "",
-  adminNotes: "",
-  denialReason: "",
 };
 
 function AdminRefunds() {
@@ -54,13 +52,16 @@ function AdminRefunds() {
 
   const [loading, setLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [lookupsLoading, setLookupsLoading] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState(initialCreateForm);
-  const [statusForm, setStatusForm] = useState(initialStatusForm);
+
+  const [shopifyLookup, setShopifyLookup] = useState(null);
+  const [orderLookupLoading, setOrderLookupLoading] = useState(false);
+  const [matchingItems, setMatchingItems] = useState(false);
+  const [selectedOrderItems, setSelectedOrderItems] = useState({});
 
   const activeStatusOptions = useMemo(() => {
     return returnStatuses?.length ? returnStatuses : FALLBACK_STATUS_OPTIONS;
@@ -90,12 +91,6 @@ function AdminRefunds() {
   const getReasonName = (reasonId) => {
     const match = returnReasons.find((reason) => Number(reason.id) === Number(reasonId));
     return match?.name || "";
-  };
-
-  const getSelectedCreateReason = () => {
-    return returnReasons.find(
-      (reason) => Number(reason.id) === Number(createForm.returnReasonId),
-    );
   };
 
   const getImageUrl = (url) => {
@@ -136,14 +131,7 @@ function AdminRefunds() {
     return payload;
   };
 
-  const hydrateStatusForm = (item) => {
-    setStatusForm({
-      status: item?.status || item?.statusName || "",
-      notes: item?.notes || "",
-      adminNotes: item?.adminNotes || "",
-      denialReason: item?.denialReason || "",
-    });
-  };
+
 
   const loadRefunds = (pageIndex = pageData.pageIndex) => {
     setLoading(true);
@@ -164,7 +152,6 @@ function AdminRefunds() {
 
         if (selectedRefund && !mapped.items.some((item) => item.id === selectedRefund.id)) {
           setSelectedRefund(null);
-          setStatusForm(initialStatusForm);
         }
       })
       .catch((err) => {
@@ -183,13 +170,14 @@ function AdminRefunds() {
 
   const loadRefundById = (id) => {
     setDetailsLoading(true);
+    setShopifyLookup(null);
+    setSelectedOrderItems({});
 
     refundRequestsService
       .getRefundRequestById(id)
       .then((response) => {
         const item = response?.item || null;
         setSelectedRefund(item);
-        hydrateStatusForm(item);
       })
       .catch((err) => {
         showApiError(err, "Failed to load refund details.");
@@ -232,65 +220,22 @@ function AdminRefunds() {
   const onSearch = (e) => {
     e.preventDefault();
     setSelectedRefund(null);
-    setStatusForm(initialStatusForm);
+    setShopifyLookup(null);
+    setSelectedOrderItems({});
     loadRefunds(0);
   };
 
   const onReset = () => {
     setFilters(initialFilters);
     setSelectedRefund(null);
-    setStatusForm(initialStatusForm);
+    setShopifyLookup(null);
+    setSelectedOrderItems({});
     setTimeout(() => loadRefunds(0), 0);
   };
 
   const onSelectRefund = (refund) => {
     if (!refund?.id) return;
     loadRefundById(refund.id);
-  };
-
-  const onStatusFormChange = (e) => {
-    const { name, value } = e.target;
-    setStatusForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const onUpdateStatus = () => {
-    if (!selectedRefund?.id) {
-      toastr.warning("Select a refund request first.");
-      return;
-    }
-
-    if (!statusForm.status) {
-      toastr.warning("Please choose a status.");
-      return;
-    }
-
-    if (statusForm.status === "Denied" && !statusForm.denialReason.trim()) {
-      toastr.warning("Please add a denial reason when denying a refund request.");
-      return;
-    }
-
-    setSaving(true);
-
-    const payload = {
-      status: statusForm.status,
-      notes: statusForm.notes.trim() || null,
-      adminNotes: statusForm.adminNotes.trim() || null,
-      denialReason: statusForm.denialReason.trim() || null,
-    };
-
-    refundRequestsService
-      .updateRefundRequestStatus(selectedRefund.id, payload)
-      .then(() => {
-        toastr.success("Refund request updated.");
-        loadRefundById(selectedRefund.id);
-        loadRefunds(pageData.pageIndex);
-      })
-      .catch((err) => {
-        showApiError(err, "Failed to update refund request.");
-      })
-      .finally(() => {
-        setSaving(false);
-      });
   };
 
   const goToPreviousPage = () => {
@@ -330,40 +275,32 @@ function AdminRefunds() {
   const onCreateRefundRequest = (e) => {
     e.preventDefault();
 
-    const selectedReason = getSelectedCreateReason();
-
-    if (!createForm.partId) {
-      toastr.warning("Part Id is required.");
-      return;
-    }
-
     if (!createForm.reason.trim()) {
       toastr.warning("Reason is required.");
       return;
     }
 
-    if (selectedReason?.requiresNotes && !createForm.notes.trim()) {
-      toastr.warning("This reason requires written notes.");
-      return;
-    }
-
-    if (selectedReason?.requiresPhotos) {
-      toastr.warning("This reason requires photos. Photo upload will be handled from the customer return form.");
-      return;
-    }
-
     setCreating(true);
 
-    const partId = Number(createForm.partId);
+    const partId = createForm.partId.trim()
+      ? Number(createForm.partId.trim())
+      : null;
+
     const payload = {
       partId,
-      shopifyOrderId: createForm.shopifyOrderId ? Number(createForm.shopifyOrderId) : null,
+      shopifyOrderId: createForm.shopifyOrderId.trim() || null,
       orderNumber: createForm.orderNumber.trim() || null,
       customerEmail: createForm.customerEmail.trim() || null,
-      returnReasonId: createForm.returnReasonId ? Number(createForm.returnReasonId) : null,
+      requestedPartName: createForm.requestedPartName.trim() || null,
+      requestedQuantity: createForm.requestedQuantity.trim()
+        ? Number(createForm.requestedQuantity.trim())
+        : null,
+      returnReasonId: createForm.returnReasonId
+        ? Number(createForm.returnReasonId)
+        : null,
       reason: createForm.reason.trim(),
       notes: createForm.notes.trim() || null,
-      items: [{ partId, quantity: 1 }],
+      items: partId ? [{ partId, quantity: 1 }] : [],
       photos: [],
     };
 
@@ -384,6 +321,151 @@ function AdminRefunds() {
         setCreating(false);
       });
   };
+
+  const getOrderItemImage = (item) => {
+    return (
+      item?.localPart?.imageUrl ||
+      item?.localPart?.imageUrls?.[0] ||
+      item?.shopifyImageUrl ||
+      ""
+    );
+  };
+
+  const buildSelectedOrderItemState = (order) => {
+    const existing = new Map(
+      (selectedRefund?.items || [])
+        .filter((item) => item.shopifyLineItemId)
+        .map((item) => [
+          String(item.shopifyLineItemId),
+          Number(item.quantity || 1),
+        ]),
+    );
+
+    const next = {};
+
+    (order?.lineItems || []).forEach((item) => {
+      const id = String(item.shopifyLineItemId);
+      const existingQuantity = existing.get(id);
+
+      if (existingQuantity) {
+        next[id] = Math.min(
+          Math.max(1, existingQuantity),
+          Number(item.quantity || 1),
+        );
+      }
+    });
+
+    return next;
+  };
+
+  const loadShopifyOrder = () => {
+    if (!selectedRefund?.id) {
+      toastr.warning("Select a refund request first.");
+      return;
+    }
+
+    if (!selectedRefund.orderNumber) {
+      toastr.warning("This request does not have an order number.");
+      return;
+    }
+
+    setOrderLookupLoading(true);
+
+    refundRequestsService
+      .getShopifyOrderForRefund(selectedRefund.id)
+      .then((response) => {
+        const lookup = response?.item || null;
+        setShopifyLookup(lookup);
+        setSelectedOrderItems(
+          buildSelectedOrderItemState(lookup?.order),
+        );
+
+        if (lookup?.customerEmailMatches) {
+          toastr.success("Shopify order loaded and email matched.");
+        } else {
+          toastr.warning(
+            "Shopify order loaded, but the customer email does not match. Verify it before approval.",
+          );
+        }
+      })
+      .catch((err) => {
+        setShopifyLookup(null);
+        setSelectedOrderItems({});
+        showApiError(err, "Unable to load the Shopify order.");
+      })
+      .finally(() => {
+        setOrderLookupLoading(false);
+      });
+  };
+
+  const toggleOrderItem = (item) => {
+    const id = String(item.shopifyLineItemId);
+
+    setSelectedOrderItems((current) => {
+      const next = { ...current };
+
+      if (next[id]) {
+        delete next[id];
+      } else {
+        next[id] = 1;
+      }
+
+      return next;
+    });
+  };
+
+  const changeOrderItemQuantity = (item, value) => {
+    const id = String(item.shopifyLineItemId);
+    const max = Math.max(1, Number(item.quantity || 1));
+    const parsed = Number(value);
+    const quantity = Number.isFinite(parsed)
+      ? Math.min(max, Math.max(1, parsed))
+      : 1;
+
+    setSelectedOrderItems((current) => ({
+      ...current,
+      [id]: quantity,
+    }));
+  };
+
+  const saveMatchedOrderItems = () => {
+    if (!selectedRefund?.id || !shopifyLookup?.order) {
+      toastr.warning("Load the Shopify order first.");
+      return;
+    }
+
+    const items = Object.entries(selectedOrderItems).map(
+      ([shopifyLineItemId, quantity]) => ({
+        shopifyLineItemId,
+        quantity: Number(quantity),
+      }),
+    );
+
+    if (items.length === 0) {
+      toastr.warning("Select at least one order item.");
+      return;
+    }
+
+    setMatchingItems(true);
+
+    refundRequestsService
+      .matchShopifyItems(selectedRefund.id, items)
+      .then((response) => {
+        const refreshed = response?.item || null;
+
+        setSelectedRefund(refreshed);
+        toastr.success("Shopify order items matched to the return request.");
+        loadRefunds(pageData.pageIndex);
+      })
+      .catch((err) => {
+        showApiError(err, "Unable to save the selected order items.");
+      })
+      .finally(() => {
+        setMatchingItems(false);
+      });
+  };
+
+  const orderCurrency = shopifyLookup?.order?.currencyCode || "USD";
 
   return (
     <div className="refunds-page">
@@ -455,6 +537,7 @@ function AdminRefunds() {
                   <th>Id</th>
                   <th>Order</th>
                   <th>Customer</th>
+                  <th>Requested Part</th>
                   <th>Reason</th>
                   <th>Items</th>
                   <th>Photos</th>
@@ -472,6 +555,12 @@ function AdminRefunds() {
                       <small>{refund.shopifyOrderId ? `Shopify: ${refund.shopifyOrderId}` : ""}</small>
                     </td>
                     <td>{refund.customerEmail || "-"}</td>
+                    <td className="requested-part-cell">
+                      <div>{refund.requestedPartName || refund.partName || "-"}</div>
+                      {refund.requestedQuantity ? (
+                        <small>Qty: {refund.requestedQuantity}</small>
+                      ) : null}
+                    </td>
                     <td className="reason-cell">{refund.returnReasonName || refund.reason}</td>
                     <td>{refund.itemCount ?? refund.items?.length ?? "-"}</td>
                     <td>{refund.photoCount ?? refund.photos?.length ?? "-"}</td>
@@ -520,6 +609,8 @@ function AdminRefunds() {
                 <div><strong>Status:</strong> {selectedRefund.status || selectedRefund.statusName}</div>
                 <div><strong>Order Number:</strong> {selectedRefund.orderNumber || "-"}</div>
                 <div><strong>Customer Email:</strong> {selectedRefund.customerEmail || "-"}</div>
+                <div><strong>Customer Part Description:</strong> {selectedRefund.requestedPartName || selectedRefund.partName || "-"}</div>
+                <div><strong>Quantity Requested:</strong> {selectedRefund.requestedQuantity || "-"}</div>
                 <div><strong>Shopify Order Id:</strong> {selectedRefund.shopifyOrderId || "-"}</div>
                 <div><strong>Return Reason:</strong> {selectedRefund.returnReasonName || selectedRefund.reason || "-"}</div>
                 <div><strong>Created By:</strong> {selectedRefund.createdByName || "-"}</div>
@@ -533,25 +624,242 @@ function AdminRefunds() {
                 <p>{selectedRefund.notes || "-"}</p>
               </div>
 
+              <div className="refunds-section refunds-order-match-panel">
+                <div className="refunds-section-heading">
+                  <div>
+                    <h4>Shopify Order Matching</h4>
+                    <p>
+                      Order contents are visible only to authenticated
+                      administrators. Select the item or items the customer is
+                      returning.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="refunds-btn secondary"
+                    onClick={loadShopifyOrder}
+                    disabled={orderLookupLoading || !selectedRefund.orderNumber}
+                  >
+                    {orderLookupLoading
+                      ? "Loading Order..."
+                      : shopifyLookup
+                        ? "Reload Shopify Order"
+                        : "Load Shopify Order"}
+                  </button>
+                </div>
+
+                {!selectedRefund.orderNumber ? (
+                  <div className="refunds-empty compact">
+                    This request does not include an order number.
+                  </div>
+                ) : !shopifyLookup ? (
+                  <div className="refunds-order-match-placeholder">
+                    <strong>Saved order:</strong>{" "}
+                    {selectedRefund.orderNumber}
+                    <br />
+                    <strong>Customer entry:</strong>{" "}
+                    {selectedRefund.requestedPartName || "-"}
+                    {selectedRefund.requestedQuantity
+                      ? ` — Qty ${selectedRefund.requestedQuantity}`
+                      : ""}
+                  </div>
+                ) : (
+                  <>
+                    <div className="refunds-order-summary">
+                      <div>
+                        <strong>{shopifyLookup.order.name}</strong>
+                        <span>
+                          Shopify ID: {shopifyLookup.order.shopifyOrderId}
+                        </span>
+                      </div>
+                      <div>
+                        <span>
+                          {shopifyLookup.order.customerDisplayName ||
+                            "Shopify Customer"}
+                        </span>
+                        <span>{shopifyLookup.order.customerEmail || "-"}</span>
+                      </div>
+                      <div>
+                        <span>
+                          {shopifyLookup.order.lineItems?.reduce(
+                            (sum, item) => sum + Number(item.quantity || 0),
+                            0,
+                          )}{" "}
+                          item(s)
+                        </span>
+                        <strong>
+                          {formatCurrency(shopifyLookup.order.totalPrice)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`refunds-email-check ${
+                        shopifyLookup.customerEmailMatches
+                          ? "is-match"
+                          : "is-warning"
+                      }`}
+                    >
+                      {shopifyLookup.customerEmailMatches
+                        ? "The email entered by the customer matches the Shopify order."
+                        : `Email mismatch: customer entered ${
+                            shopifyLookup.requestedEmail || "no email"
+                          }, while Shopify shows ${
+                            shopifyLookup.order.customerEmail || "no email"
+                          }. Verify manually before approval.`}
+                    </div>
+
+                    <div className="refunds-order-items">
+                      {(shopifyLookup.order.lineItems || []).map((item) => {
+                        const id = String(item.shopifyLineItemId);
+                        const isSelected = Boolean(selectedOrderItems[id]);
+                        const imageUrl = getOrderItemImage(item);
+
+                        return (
+                          <article
+                            key={id}
+                            className={`refunds-order-item ${
+                              isSelected ? "is-selected" : ""
+                            }`}
+                          >
+                            <label className="refunds-order-item-select">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleOrderItem(item)}
+                              />
+                              <span>Select</span>
+                            </label>
+
+                            {imageUrl ? (
+                              <img
+                                src={getImageUrl(imageUrl)}
+                                alt={item.title || "Order item"}
+                              />
+                            ) : (
+                              <div className="refunds-order-item-no-image">
+                                No Image
+                              </div>
+                            )}
+
+                            <div className="refunds-order-item-copy">
+                              <strong>{item.title}</strong>
+                              <span>SKU: {item.sku || "-"}</span>
+                              <span>Purchased: {item.quantity}</span>
+                              <span>
+                                Unit price:{" "}
+                                {Number(item.unitPrice || 0).toLocaleString(
+                                  undefined,
+                                  {
+                                    style: "currency",
+                                    currency: orderCurrency,
+                                  },
+                                )}
+                              </span>
+                              <span>
+                                Local match:{" "}
+                                {item.localPart
+                                  ? `#${item.localPart.partId} ${item.localPart.partName}`
+                                  : "No Site_2024 part matched"}
+                              </span>
+                            </div>
+
+                            <label className="refunds-order-item-quantity">
+                              Return Qty
+                              <input
+                                type="number"
+                                min="1"
+                                max={item.quantity}
+                                value={selectedOrderItems[id] || 1}
+                                onChange={(event) =>
+                                  changeOrderItemQuantity(
+                                    item,
+                                    event.target.value,
+                                  )
+                                }
+                                disabled={!isSelected}
+                              />
+                            </label>
+                          </article>
+                        );
+                      })}
+                    </div>
+
+                    <div className="refunds-order-match-actions">
+                      <span>
+                        {Object.keys(selectedOrderItems).length}{" "}
+                        line item(s) selected
+                      </span>
+
+                      <button
+                        type="button"
+                        className="refunds-btn primary"
+                        onClick={saveMatchedOrderItems}
+                        disabled={
+                          matchingItems ||
+                          Object.keys(selectedOrderItems).length === 0
+                        }
+                      >
+                        {matchingItems
+                          ? "Saving Items..."
+                          : "Save Selected Items"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div className="refunds-section">
-                <h4>Requested Items</h4>
+                <h4>Matched Return Items</h4>
                 {selectedRefund.items?.length ? (
                   <div className="refund-items-list">
                     {selectedRefund.items.map((item) => (
                       <div key={item.id} className="refund-item-card">
-                        {item.image && <img src={getImageUrl(item.image)} alt={item.partName || "Part"} />}
+                        {(item.image || item.imageUrl) && (
+                          <img
+                            src={getImageUrl(item.image || item.imageUrl)}
+                            alt={item.partName || item.productTitle || "Part"}
+                          />
+                        )}
                         <div>
-                          <strong>{item.partName || `Part ${item.partId}`}</strong>
-                          <p>Part #: {item.partNumber || "-"}</p>
-                          <p>Qty: {item.quantity || 1}</p>
-                          <p>Price: {formatCurrency(item.price)}</p>
-                          {item.itemNotes && <p>Item Notes: {item.itemNotes}</p>}
+                          <strong>
+                            {item.partName ||
+                              item.productTitle ||
+                              (item.partId
+                                ? `Part ${item.partId}`
+                                : "Shopify Order Item")}
+                          </strong>
+                          <p>
+                            Part / SKU: {item.partNumber || item.sku || "-"}
+                          </p>
+                          <p>
+                            Return Qty: {item.quantity || 1}
+                            {item.quantityPurchased
+                              ? ` of ${item.quantityPurchased} purchased`
+                              : ""}
+                          </p>
+                          <p>
+                            Unit Price:{" "}
+                            {formatCurrency(item.unitPrice ?? item.price)}
+                          </p>
+                          {item.shopifyLineItemId && (
+                            <p>
+                              Shopify Line Item: {item.shopifyLineItemId}
+                            </p>
+                          )}
+                          {item.itemNotes && (
+                            <p>Item Notes: {item.itemNotes}</p>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="refunds-empty compact">No item rows were returned for this request.</div>
+                  <div className="refunds-empty compact">
+                    No Shopify order line has been matched yet. Load the
+                    order above and select the item or items being returned.
+                  </div>
                 )}
               </div>
 
@@ -571,42 +879,38 @@ function AdminRefunds() {
                 )}
               </div>
 
-              <div className="refunds-update-panel">
-                <h4>Admin Decision</h4>
+              <AdminRefundDecisionPanel
+                refund={selectedRefund}
+                formatDate={formatDate}
+                showApiError={showApiError}
+                onDecisionSaved={(updated) => {
+                  setSelectedRefund(updated);
+                  setShopifyLookup(null);
+                  setSelectedOrderItems({});
+                  loadRefunds(pageData.pageIndex);
+                }}
+              />
 
-                <div className="refunds-filter-group">
-                  <label htmlFor="updateStatus">Update Status</label>
-                  <select id="updateStatus" name="status" value={statusForm.status} onChange={onStatusFormChange}>
-                    <option value="">Select status</option>
-                    {activeStatusOptions.map((option) => (
-                      <option key={option.id || option.name} value={option.name}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <AdminRefundShippingPanel
+                refund={selectedRefund}
+                formatDate={formatDate}
+                formatCurrency={formatCurrency}
+                showApiError={showApiError}
+                onUpdated={(updated) => {
+                  setSelectedRefund(updated);
+                  loadRefunds(pageData.pageIndex);
+                }}
+              />
 
-                <div className="refunds-filter-group full-width">
-                  <label htmlFor="updateNotes">Customer/Internal Case Notes</label>
-                  <textarea id="updateNotes" name="notes" value={statusForm.notes} onChange={onStatusFormChange} rows="4" placeholder="General notes for this refund request..." />
-                </div>
-
-                <div className="refunds-filter-group full-width">
-                  <label htmlFor="adminNotes">Admin Notes</label>
-                  <textarea id="adminNotes" name="adminNotes" value={statusForm.adminNotes} onChange={onStatusFormChange} rows="4" placeholder="Admin-only notes..." />
-                </div>
-
-                <div className="refunds-filter-group full-width">
-                  <label htmlFor="denialReason">Denial Reason</label>
-                  <textarea id="denialReason" name="denialReason" value={statusForm.denialReason} onChange={onStatusFormChange} rows="3" placeholder="Required if denying this request..." />
-                </div>
-
-                <div className="refunds-filter-actions">
-                  <button type="button" className="refunds-btn primary" onClick={onUpdateStatus} disabled={saving}>
-                    {saving ? "Saving..." : "Save Update"}
-                  </button>
-                </div>
-              </div>
+              <AdminRefundInspectionPanel
+                refund={selectedRefund}
+                formatDate={formatDate}
+                showApiError={showApiError}
+                onUpdated={(updated) => {
+                  setSelectedRefund(updated);
+                  loadRefunds(pageData.pageIndex);
+                }}
+              />
             </>
           )}
         </div>
@@ -624,13 +928,13 @@ function AdminRefunds() {
 
             <form onSubmit={onCreateRefundRequest} className="refunds-modal-form">
               <div className="refunds-filter-group">
-                <label htmlFor="createPartId">Part Id</label>
-                <input id="createPartId" name="partId" type="number" value={createForm.partId} onChange={onCreateFormChange} placeholder="e.g. 125" />
+                <label htmlFor="createPartId">Part Id (optional)</label>
+                <input id="createPartId" name="partId" type="text" inputMode="numeric" pattern="[0-9]*" maxLength="10" value={createForm.partId} onChange={onCreateFormChange} placeholder="e.g. 125" />
               </div>
 
               <div className="refunds-filter-group">
-                <label htmlFor="createShopifyOrderId">Shopify Order Id</label>
-                <input id="createShopifyOrderId" name="shopifyOrderId" type="number" value={createForm.shopifyOrderId} onChange={onCreateFormChange} placeholder="e.g. 1234567890" />
+                <label htmlFor="createShopifyOrderId">Shopify Order Id (optional)</label>
+                <input id="createShopifyOrderId" name="shopifyOrderId" type="text" inputMode="numeric" pattern="[0-9]*" maxLength="19" value={createForm.shopifyOrderId} onChange={onCreateFormChange} placeholder="e.g. 1234567890" />
               </div>
 
               <div className="refunds-filter-group">
@@ -641,6 +945,16 @@ function AdminRefunds() {
               <div className="refunds-filter-group">
                 <label htmlFor="createCustomerEmail">Customer Email</label>
                 <input id="createCustomerEmail" name="customerEmail" type="email" value={createForm.customerEmail} onChange={onCreateFormChange} placeholder="customer@email.com" />
+              </div>
+
+              <div className="refunds-filter-group">
+                <label htmlFor="createRequestedPartName">Customer Part Description (optional)</label>
+                <input id="createRequestedPartName" name="requestedPartName" type="text" maxLength="500" value={createForm.requestedPartName} onChange={onCreateFormChange} placeholder="Part name or description" />
+              </div>
+
+              <div className="refunds-filter-group">
+                <label htmlFor="createRequestedQuantity">Requested Quantity (optional)</label>
+                <input id="createRequestedQuantity" name="requestedQuantity" type="text" inputMode="numeric" pattern="[0-9]*" maxLength="3" value={createForm.requestedQuantity} onChange={onCreateFormChange} />
               </div>
 
               <div className="refunds-filter-group full-width">
@@ -659,6 +973,12 @@ function AdminRefunds() {
                   <input id="createReason" name="reason" type="text" value={createForm.reason} onChange={onCreateFormChange} placeholder="Reason for refund request" />
                 </div>
               )}
+
+              <div className="refunds-admin-override-note full-width">
+                Admin-created requests can be saved without proof photos or
+                customer-facing reason requirements. Add internal context in
+                Notes when an exception is being made.
+              </div>
 
               <div className="refunds-filter-group full-width">
                 <label htmlFor="createNotes">Notes</label>

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import toastr from "toastr";
 import refundRequestsService from "../service/refundRequestService";
 import "./CustomerReturnRequest.css";
@@ -7,14 +6,13 @@ import "./CustomerReturnRequest.css";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_PHOTO_COUNT = 10;
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SQL_BIGINT = "9223372036854775807";
-const MAX_SQL_INT = "2147483647";
+const MAX_RETURN_QUANTITY = 999;
 
 const initialForm = {
-  partId: "",
-  shopifyOrderId: "",
   orderNumber: "",
   customerEmail: "",
+  requestedPartName: "",
+  requestedQuantity: "1",
   returnReasonId: "",
   notes: "",
 };
@@ -40,13 +38,7 @@ const createPhotoId = (file) => {
 };
 
 function CustomerReturnRequest() {
-  const [searchParams] = useSearchParams();
-  const prefilledPartId = searchParams.get("partId") || "";
-
-  const [formData, setFormData] = useState(() => ({
-    ...initialForm,
-    partId: prefilledPartId,
-  }));
+  const [formData, setFormData] = useState(initialForm);
   const [returnReasons, setReturnReasons] = useState([]);
   const [photos, setPhotos] = useState([]);
   const photosRef = useRef([]);
@@ -111,8 +103,6 @@ function CustomerReturnRequest() {
   const handlePhotoChange = (event) => {
     const incoming = Array.from(event.target.files || []);
     addPhotos(incoming);
-
-    // Allows selecting the same filename again after it has been removed.
     event.target.value = "";
   };
 
@@ -211,75 +201,39 @@ function CustomerReturnRequest() {
     setPhotos([]);
   };
 
-  const validateIdentifier = (value, label, maxValue, required) => {
-    const trimmed = value.trim();
-
-    if (!trimmed) {
-      if (required) {
-        toastr.error(`Please enter the ${label}.`);
-        return false;
-      }
-
-      return true;
-    }
-
-    if (!/^\d+$/.test(trimmed)) {
-      toastr.error(`${label} must contain numbers only.`);
-      return false;
-    }
-
-    // Normalize leading zeroes without converting the identifier to Number.
-    // This preserves all digits in large Shopify IDs on older browsers/builds
-    // that do not expose BigInt to the current ESLint environment.
-    const normalized = trimmed.replace(/^0+(?=\d)/, "");
-
-    if (normalized === "0") {
-      toastr.error(`${label} must be greater than zero.`);
-      return false;
-    }
-
-    const exceedsMaximum =
-      normalized.length > maxValue.length ||
-      (normalized.length === maxValue.length && normalized > maxValue);
-
-    if (exceedsMaximum) {
-      toastr.error(`${label} is larger than the supported value.`);
-      return false;
-    }
-
-    return true;
-  };
-
   const validate = () => {
-    if (
-      !validateIdentifier(
-        formData.partId,
-        "part/listing ID",
-        MAX_SQL_INT,
-        true,
-      )
-    ) {
-      return false;
-    }
-
-    if (
-      !validateIdentifier(
-        formData.shopifyOrderId,
-        "Shopify order ID",
-        MAX_SQL_BIGINT,
-        false,
-      )
-    ) {
-      return false;
-    }
-
     if (!formData.orderNumber.trim()) {
       toastr.error("Please enter your order number.");
       return false;
     }
 
     if (!formData.customerEmail.trim()) {
-      toastr.error("Please enter your email address.");
+      toastr.error("Please enter the email used on the order.");
+      return false;
+    }
+
+    if (formData.requestedPartName.trim().length < 2) {
+      toastr.error("Please enter the name or a short description of the part.");
+      return false;
+    }
+
+    const quantityText = formData.requestedQuantity.trim();
+
+    if (!/^\d+$/.test(quantityText)) {
+      toastr.error("Quantity being returned must contain numbers only.");
+      return false;
+    }
+
+    const quantity = Number(quantityText);
+
+    if (
+      !Number.isSafeInteger(quantity) ||
+      quantity < 1 ||
+      quantity > MAX_RETURN_QUANTITY
+    ) {
+      toastr.error(
+        `Quantity being returned must be between 1 and ${MAX_RETURN_QUANTITY}.`,
+      );
       return false;
     }
 
@@ -310,16 +264,11 @@ function CustomerReturnRequest() {
 
     const payload = new FormData();
 
-    // Keep identifier values as strings in JavaScript so large Shopify IDs
-    // never pass through Number and lose precision.
-    payload.append("PartId", formData.partId.trim());
     payload.append("OrderNumber", formData.orderNumber.trim());
     payload.append("CustomerEmail", formData.customerEmail.trim());
+    payload.append("RequestedPartName", formData.requestedPartName.trim());
+    payload.append("RequestedQuantity", formData.requestedQuantity.trim());
     payload.append("ReturnReasonId", formData.returnReasonId);
-
-    if (formData.shopifyOrderId.trim()) {
-      payload.append("ShopifyOrderId", formData.shopifyOrderId.trim());
-    }
 
     if (formData.notes.trim()) {
       payload.append("Notes", formData.notes.trim());
@@ -338,15 +287,9 @@ function CustomerReturnRequest() {
 
       setSubmittedId(id);
       toastr.success("Return request submitted.");
-
-      setFormData({
-        ...initialForm,
-        partId: prefilledPartId,
-      });
+      setFormData(initialForm);
       clearPhotos();
     } catch (err) {
-      // Form state and selected files intentionally remain in place so the
-      // customer can correct another field without re-selecting proof photos.
       showApiError(err, "Unable to submit return request.");
     } finally {
       setSubmitting(false);
@@ -360,8 +303,10 @@ function CustomerReturnRequest() {
           <p className="customer-return-eyebrow">Returns</p>
           <h1 id="return-title">Request a Return</h1>
           <p className="customer-return-intro">
-            Submit the request below. An administrator will review it before
-            approval or denial.
+            Enter the order number, the email used at checkout, and the name or
+            description of the part. Order contents are never displayed on this
+            public page. An administrator will verify the order and match the
+            correct item during review.
           </p>
         </div>
 
@@ -374,28 +319,6 @@ function CustomerReturnRequest() {
 
         <form onSubmit={handleSubmit} className="customer-return-form" noValidate>
           <div className="return-form-grid">
-            <label htmlFor="return-part-id">
-              Part / Listing ID
-              <input
-                id="return-part-id"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                name="partId"
-                value={formData.partId}
-                onChange={handleInputChange}
-                maxLength="10"
-                autoComplete="off"
-                placeholder="Example: 48"
-                aria-describedby="return-part-id-help"
-                required
-                disabled={submitting}
-              />
-              <span id="return-part-id-help" className="return-field-help">
-                Enter the listing number without commas or spaces.
-              </span>
-            </label>
-
             <label htmlFor="return-order-number">
               Order Number
               <input
@@ -406,6 +329,7 @@ function CustomerReturnRequest() {
                 onChange={handleInputChange}
                 maxLength="100"
                 autoComplete="off"
+                placeholder="Example: #1001"
                 required
                 disabled={submitting}
               />
@@ -426,29 +350,42 @@ function CustomerReturnRequest() {
               />
             </label>
 
-            <label htmlFor="return-shopify-order-id">
-              Shopify Order ID <span className="return-optional">(optional)</span>
+            <label htmlFor="return-requested-part-name">
+              Part Name or Description
               <input
-                id="return-shopify-order-id"
+                id="return-requested-part-name"
+                type="text"
+                name="requestedPartName"
+                value={formData.requestedPartName}
+                onChange={handleInputChange}
+                maxLength="500"
+                autoComplete="off"
+                placeholder="Example: Porsche 911 driver-side door mirror"
+                aria-describedby="return-requested-part-help"
+                required
+                disabled={submitting}
+              />
+              <span id="return-requested-part-help" className="return-field-help">
+                Enter enough detail for an administrator to identify the item on
+                your order.
+              </span>
+            </label>
+
+            <label htmlFor="return-requested-quantity">
+              Quantity Being Returned
+              <input
+                id="return-requested-quantity"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                name="shopifyOrderId"
-                value={formData.shopifyOrderId}
+                name="requestedQuantity"
+                value={formData.requestedQuantity}
                 onChange={handleInputChange}
-                maxLength="19"
+                maxLength="3"
                 autoComplete="off"
-                placeholder="Numbers only"
-                aria-describedby="return-shopify-order-id-help"
+                required
                 disabled={submitting}
               />
-              <span
-                id="return-shopify-order-id-help"
-                className="return-field-help"
-              >
-                Kept as text in the browser so the complete Shopify ID remains
-                exact.
-              </span>
             </label>
           </div>
 
