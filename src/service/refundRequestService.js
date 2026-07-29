@@ -236,6 +236,124 @@ const completeReturnInspection = (id, payload) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+
+const getRefundPreview = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/refund-preview`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const getRefundFinalization = (id) => {
+  const config = {
+    method: "GET",
+    url: `${endpoint}/${id}/finalization`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const prepareRefundFinalization = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/finalization/prepare`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const confirmRefundFinalization = (id, payload) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/finalization/confirm`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const retryRefundInventory = (id) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/finalization/retry-inventory`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const retryRefundCompletionEmail = (id) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${id}/finalization/retry-email`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+
+const getRefundInventoryDispositions = (id) => {
+  const config = {
+    method: "GET",
+    url: `${endpoint}/${id}/inventory-dispositions`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const executeRefundInventoryDispositionAction = (
+  refundRequestId,
+  dispositionItemId,
+  payload,
+) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${refundRequestId}/inventory-dispositions/items/${dispositionItemId}/actions`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+const retryRefundInventoryDispositionAction = (refundRequestId, actionId) => {
+  const config = {
+    method: "POST",
+    url: `${endpoint}/${refundRequestId}/inventory-dispositions/actions/${actionId}/retry`,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
 const submitCustomerReturnRequest = (formData) => {
   const config = {
     method: "POST",
@@ -268,6 +386,15 @@ const refundRequestsService = {
   markReturnItemReceived,
   completeReturnInspection,
   updateRefundRequestStatus,
+  getRefundPreview,
+  getRefundFinalization,
+  prepareRefundFinalization,
+  confirmRefundFinalization,
+  retryRefundInventory,
+  retryRefundCompletionEmail,
+  getRefundInventoryDispositions,
+  executeRefundInventoryDispositionAction,
+  retryRefundInventoryDispositionAction,
 };
 
 export default refundRequestsService;

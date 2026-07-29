@@ -4,6 +4,8 @@ import refundRequestsService from "../service/refundRequestService";
 import AdminRefundDecisionPanel from "./AdminRefundDecisionPanel";
 import AdminRefundShippingPanel from "./AdminRefundShippingPanel";
 import AdminRefundInspectionPanel from "./AdminRefundInspectionPanel";
+import AdminRefundFinalizationPanel from "./AdminRefundFinalizationPanel";
+import AdminRefundInventoryDispositionPanel from "./AdminRefundInventoryDispositionPanel";
 import { API_HOST_PREFIX } from "../service/serviceHelpers";
 import "./AdminRefunds.css";
 
@@ -908,6 +910,26 @@ function AdminRefunds() {
                 showApiError={showApiError}
                 onUpdated={(updated) => {
                   setSelectedRefund(updated);
+                  loadRefunds(pageData.pageIndex);
+                }}
+              />
+
+              <AdminRefundFinalizationPanel
+                refund={selectedRefund}
+                formatDate={formatDate}
+                showApiError={showApiError}
+                onUpdated={() => {
+                  loadRefundById(selectedRefund.id);
+                  loadRefunds(pageData.pageIndex);
+                }}
+              />
+
+              <AdminRefundInventoryDispositionPanel
+                refund={selectedRefund}
+                formatDate={formatDate}
+                showApiError={showApiError}
+                onUpdated={() => {
+                  loadRefundById(selectedRefund.id);
                   loadRefunds(pageData.pageIndex);
                 }}
               />
