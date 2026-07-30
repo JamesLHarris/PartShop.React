@@ -690,7 +690,6 @@
   }
 }
 
-
 /* Independent customer columns prevent one side from pushing the other downward. */
 .apd-customer-main,
 .apd-customer-side {
@@ -757,8 +756,6 @@
   box-shadow: 0 0 0 3px var(--site-focus-ring, rgba(79, 140, 255, 0.38));
 }
 
-
-
 /* =========================
    Add Item client-review layout
    ========================= */
@@ -779,7 +776,6 @@
     grid-column: auto;
   }
 }
-
 
 /* Contact-only / custom shipping quote state. */
 .apd-shipping-quote {
@@ -809,6 +805,11 @@
   line-height: 1.45;
 }
 
+/* Customer details page price */
+.apd-purchase-card .apd-dl > div:first-child dd {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
 
 /* On narrower screens, restore the natural customer reading order. */
 @media (max-width: 1180px) {

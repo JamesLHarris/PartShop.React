@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from "react";
-import currentLogo from "../itemPhotos/Tig_Teddy.png";
+import currentLogo from "../itemPhotos/Company_Logo.png";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import toastr from "toastr";
 import makeService from "../service/makeService";
 import catagoryService from "../service/catagoryService";
 import CatagoryDropDown from "./CatagoryDropDown";
 import "./HomeHeader.css";
-import {
-  FaBars,
-  FaSignOutAlt,
-  FaTimes,
-  FaUser,
-} from "react-icons/fa";
+import { FaBars, FaSignOutAlt, FaTimes, FaUser } from "react-icons/fa";
 import MakeWithModelsFlyout from "./MakeWithModelsFlyout";
 import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
@@ -164,10 +159,7 @@ function HomeHeader({ value, onChange }) {
       );
     };
 
-    window.addEventListener(
-      "site-checkout-completed",
-      handleCheckoutCompleted,
-    );
+    window.addEventListener("site-checkout-completed", handleCheckoutCompleted);
 
     return () => {
       window.removeEventListener(
@@ -356,7 +348,9 @@ function HomeHeader({ value, onChange }) {
               <>
                 <div className="user-indicator">
                   <FaUser aria-hidden="true" />
-                  <span>{currentUser.name || currentUser.email || "Admin"}</span>
+                  <span>
+                    {currentUser.name || currentUser.email || "Admin"}
+                  </span>
                 </div>
 
                 <NavLink

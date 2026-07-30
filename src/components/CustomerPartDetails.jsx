@@ -165,8 +165,7 @@ function CustomerPartDetails() {
       availableId: p.availableId ?? get(p, "available", "id"),
       conditionId: p.conditionId ?? get(p, "condition", "id"),
       conditionName: p.conditionName ?? get(p, "condition", "name"),
-      shippingPolicyId:
-        p.shippingPolicyId ?? get(p, "shippingPolicy", "id"),
+      shippingPolicyId: p.shippingPolicyId ?? get(p, "shippingPolicy", "id"),
       shippingPolicyName:
         p.shippingPolicyName ?? get(p, "shippingPolicy", "name"),
       allowsOnlineCheckout:
@@ -211,7 +210,10 @@ function CustomerPartDetails() {
     setCheckingOut(true);
 
     try {
-      const response = await shopifyCheckoutService.createSinglePartCheckout(vm.id, 1);
+      const response = await shopifyCheckoutService.createSinglePartCheckout(
+        vm.id,
+        1,
+      );
       const checkoutUrl = response?.item?.checkoutUrl;
 
       if (!checkoutUrl) {
@@ -221,7 +223,9 @@ function CustomerPartDetails() {
       window.location.assign(checkoutUrl);
     } catch (err) {
       const apiMessage = err?.response?.data?.errors?.[0];
-      setCheckoutError(apiMessage || err.message || "Unable to start Shopify checkout.");
+      setCheckoutError(
+        apiMessage || err.message || "Unable to start Shopify checkout.",
+      );
       setCheckingOut(false);
     }
   };
@@ -235,7 +239,7 @@ function CustomerPartDetails() {
         ? `Shipping quote request: ${vm.name}`
         : `Question about part ${vm.name}`,
       message: isShippingQuote
-        ? `I am interested in ${vm.name} (Part ID #${vm.id}). Please provide a shipping quote and instructions for purchasing this item directly.`
+        ? `I am interested in ${vm.name}. Please provide a shipping quote and instructions for purchasing this item directly.`
         : `I have a question about ${vm.name} (Part ID #${vm.id}).`,
     });
 
@@ -325,150 +329,6 @@ function CustomerPartDetails() {
               </div>
             )}
           </aside>
-
-          <article className="apd-card apd-specs">
-            <h3>Specs</h3>
-            <dl className="apd-dl">
-              <div>
-                <dt>Part #</dt>
-                <dd>{vm.partNumber || "—"}</dd>
-              </div>
-              <div>
-                <dt>Year(s)</dt>
-                <dd>{vm.year || "—"}</dd>
-              </div>
-              <div>
-                <dt>Condition</dt>
-                <dd>{vm.conditionName || "—"}</dd>
-              </div>
-              <div>
-                <dt>Primary Category</dt>
-                <dd>{vm.category || "—"}</dd>
-              </div>
-              <div>
-                <dt>Primary Make</dt>
-                <dd>{vm.company || "—"}</dd>
-              </div>
-              <div>
-                <dt>Primary Model</dt>
-                <dd>{vm.model || "—"}</dd>
-              </div>
-            </dl>
-
-            <div className="apd-desc">
-              <h4>Description</h4>
-              <p className="apd-text">{vm.description || "No description."}</p>
-
-              {vm.requiresShippingQuote && (
-                <p className="apd-description-shipping-note" role="note">
-                  <strong>
-                    Custom shipping quote required. Due to this item&apos;s size,
-                    weight, or handling requirements, it is not available through
-                    Shopify checkout. Contact GR &amp; Sons to arrange shipping and
-                    purchase directly.
-                  </strong>
-                </p>
-              )}
-            </div>
-          </article>
-        </div>
-
-        <div className="apd-customer-side">
-          <aside className="apd-card apd-purchase-card">
-            <h3>Purchase Details</h3>
-
-          <div className="apd-dl apd-dl--stack">
-            <div>
-              <dt>Price</dt>
-              <dd>{vm.price}</dd>
-            </div>
-            <div>
-              <dt>Inventory</dt>
-              <dd>
-                <span>
-                  In stock: {Number.isFinite(vm.quantity) ? vm.quantity : "—"}
-                </span>
-                {vm.quantitySold > 0 && (
-                  <>
-                    <span aria-hidden="true"> | </span>
-                    <span>Sold: {vm.quantitySold}</span>
-                  </>
-                )}
-              </dd>
-            </div>
-          </div>
-
-          {checkoutError && (
-            <div className="apd-checkout-error" role="alert">
-              {checkoutError}
-            </div>
-          )}
-
-          {vm.requiresShippingQuote && (
-            <div className="apd-shipping-quote" role="note">
-              <strong>Custom shipping quote required</strong>
-              <span>
-                Due to this item&apos;s size, weight, or handling requirements,
-                it is not available through Shopify checkout. Contact GR &amp;
-                Sons to arrange shipping and purchase directly.
-              </span>
-            </div>
-          )}
-
-          <div className="apd-actions apd-actions--stacked">
-            {vm.requiresShippingQuote ? (
-              <button
-                type="button"
-                className="apd-btn"
-                onClick={handleContactAboutPart}
-              >
-                Contact for Shipping Quote
-              </button>
-            ) : (
-              <>
-                <button
-                  className="apd-btn"
-                  onClick={handleBuyNow}
-                  disabled={!vm.canCheckout || checkingOut}
-                >
-                  {checkingOut ? "Starting Checkout..." : "Buy Now"}
-                </button>
-                <button
-                  className="apd-btn apd-btn--outlined apd-btn--with-icon"
-                  onClick={handleAdd}
-                  disabled={!vm.canCheckout}
-                >
-                  <svg
-                    className="apd-btn__icon"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path
-                      d="M3 4h2l2.25 10.25a2 2 0 0 0 1.95 1.57h7.92a2 2 0 0 0 1.94-1.52L21 7H7"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="10" cy="20" r="1.25" fill="currentColor" />
-                    <circle cx="18" cy="20" r="1.25" fill="currentColor" />
-                  </svg>
-                  <span>Add to Cart</span>
-                </button>
-                <button
-                  type="button"
-                  className="apd-btn apd-btn--outlined"
-                  onClick={handleContactAboutPart}
-                >
-                  Contact About This Part
-                </button>
-              </>
-            )}
-            </div>
-          </aside>
-
           <article
             className={`apd-card apd-policy-card apd-policy-card--${conditionPolicy.key}`}
           >
@@ -482,6 +342,146 @@ function CustomerPartDetails() {
             <Link className="apd-policy-link" to="/policies">
               Review all purchasing and return policies
             </Link>
+          </article>
+        </div>
+
+        <div className="apd-customer-side">
+          <aside className="apd-card apd-purchase-card">
+            <h3>Purchase Details</h3>
+
+            <div className="apd-dl apd-dl--stack">
+              <div>
+                <dt>Price</dt>
+                <dd>{vm.price}</dd>
+              </div>
+              <div>
+                <dt>Inventory</dt>
+                <dd>
+                  <span>
+                    In stock: {Number.isFinite(vm.quantity) ? vm.quantity : "—"}
+                  </span>
+                  {vm.quantitySold > 0 && (
+                    <>
+                      <span aria-hidden="true"> | </span>
+                      <span>Sold: {vm.quantitySold}</span>
+                    </>
+                  )}
+                </dd>
+              </div>
+            </div>
+
+            {checkoutError && (
+              <div className="apd-checkout-error" role="alert">
+                {checkoutError}
+              </div>
+            )}
+
+            {vm.requiresShippingQuote && (
+              <div className="apd-shipping-quote" role="note">
+                <strong>Custom shipping quote required</strong>
+                <span>
+                  Due to this item&apos;s size, weight, or handling
+                  requirements, it is not available through Shopify checkout.
+                  Contact GR &amp; Sons to arrange shipping and purchase
+                  directly.
+                </span>
+              </div>
+            )}
+
+            <div className="apd-actions apd-actions--stacked">
+              {vm.requiresShippingQuote ? (
+                <button
+                  type="button"
+                  className="apd-btn"
+                  onClick={handleContactAboutPart}
+                >
+                  Contact for Shipping Quote
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="apd-btn"
+                    onClick={handleBuyNow}
+                    disabled={!vm.canCheckout || checkingOut}
+                  >
+                    {checkingOut ? "Starting Checkout..." : "Buy Now"}
+                  </button>
+                  <button
+                    className="apd-btn apd-btn--outlined apd-btn--with-icon"
+                    onClick={handleAdd}
+                    disabled={!vm.canCheckout}
+                  >
+                    <svg
+                      className="apd-btn__icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M3 4h2l2.25 10.25a2 2 0 0 0 1.95 1.57h7.92a2 2 0 0 0 1.94-1.52L21 7H7"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="10" cy="20" r="1.25" fill="currentColor" />
+                      <circle cx="18" cy="20" r="1.25" fill="currentColor" />
+                    </svg>
+                    <span>Add to Cart</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined"
+                    onClick={handleContactAboutPart}
+                  >
+                    Contact About This Part
+                  </button>
+                </>
+              )}
+            </div>
+          </aside>
+
+          <article className="apd-card apd-specs">
+            <h3>Specs</h3>
+            <dl className="apd-dl">
+              <div>
+                <dt>Part #</dt>
+                <dd>{vm.partNumber || "—"}</dd>
+              </div>
+              <div>
+                <dt>Year(s)</dt>
+                <dd>{vm.year || "—"}</dd>
+              </div>
+              <div>
+                <dt>Make</dt>
+                <dd>{vm.company || "—"}</dd>
+              </div>
+              <div>
+                <dt>Model</dt>
+                <dd>{vm.model || "—"}</dd>
+              </div>
+              <div>
+                <dt>Condition</dt>
+                <dd>{vm.conditionName || "—"}</dd>
+              </div>
+            </dl>
+
+            <div className="apd-desc">
+              <h4>Description</h4>
+              <p className="apd-text">{vm.description || "No description."}</p>
+
+              {vm.requiresShippingQuote && (
+                <p className="apd-description-shipping-note" role="note">
+                  <strong>
+                    Custom shipping quote required. Due to this item&apos;s
+                    size, weight, or handling requirements, it is not available
+                    through Shopify checkout. Contact GR &amp; Sons to arrange
+                    shipping and purchase directly.
+                  </strong>
+                </p>
+              )}
+            </div>
           </article>
 
           <article className="apd-card apd-relations">
@@ -533,9 +533,7 @@ function CustomerPartDetails() {
             </div>
           </article>
         </div>
-
       </section>
-
     </div>
   );
 }
