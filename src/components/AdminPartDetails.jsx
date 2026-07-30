@@ -329,6 +329,9 @@ function AdminPartDetails() {
       shippingPolicyId: p.shippingPolicyId ?? get(p, "shippingPolicy", "id"),
       shippingPolicyName:
         p.shippingPolicyName ?? get(p, "shippingPolicy", "name"),
+      allowsOnlineCheckout:
+        (p.allowsOnlineCheckout ??
+          get(p, "shippingPolicy", "allowsOnlineCheckout")) !== false,
 
       site: p.siteName ?? get(p, "location", "site", "name"),
       area: p.areaName ?? get(p, "location", "area", "name"),
@@ -383,11 +386,13 @@ function AdminPartDetails() {
             "Saved locally, but Shopify inventory did not sync.",
         );
       } else if (result?.shopifySyncSucceeded) {
-        toastr.success(
-          `Saved. Shopify quantity synced to ${
-            result.shopifyQuantity ?? payload.quantity
-          }.`,
-        );
+        if (result.shopifyQuantity != null) {
+          toastr.success(
+            `Saved. Shopify quantity synced to ${result.shopifyQuantity}.`,
+          );
+        } else {
+          toastr.success("Saved. Shopify status updated.");
+        }
       } else {
         toastr.success("Saved.");
       }
@@ -433,6 +438,7 @@ function AdminPartDetails() {
   if (!part) return <p>Not found.</p>;
 
   const galleryMain = activeImage || vm.image;
+  const isContactOnly = vm.allowsOnlineCheckout === false;
 
   return (
     <div className="admin-part-details">
@@ -461,9 +467,22 @@ function AdminPartDetails() {
             type="button"
             className="btn btn-primary"
             onClick={onPublishToShopifyClicked}
-            disabled={isPublishingShopify || !part?.shopifyProductId}
+            disabled={
+              isPublishingShopify ||
+              !part?.shopifyProductId ||
+              isContactOnly
+            }
+            title={
+              isContactOnly
+                ? "This item requires a custom shipping quote and must remain Draft in Shopify."
+                : ""
+            }
           >
-            {isPublishingShopify ? "Publishing..." : "Publish to Shopify"}
+            {isPublishingShopify
+              ? "Publishing..."
+              : isContactOnly
+                ? "Contact-Only Item"
+                : "Publish to Shopify"}
           </button>
 
           <button
@@ -498,6 +517,14 @@ function AdminPartDetails() {
             Sell Similar
           </button>
         </div>
+
+        {isContactOnly && (
+          <div className="apd-admin-contact-only-note" role="note">
+            This shipping policy requires a private shipping quote. The Shopify
+            product is kept as Draft, and customers are directed to the contact
+            form instead of checkout.
+          </div>
+        )}
 
         <div className="apd-subtle">
           ID #{vm.id}

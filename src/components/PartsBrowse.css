@@ -8,11 +8,43 @@
 /* Grid for parts */
 .part-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: 1900px;
+  margin: 0 auto;
   justify-content: center;
   align-items: stretch;
   gap: 24px;
-  padding: 20px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/*
+ * Step 42: progressively add columns while keeping each card comfortably
+ * sized. Wide desktop screens top out at exactly five cards per row.
+ */
+@media (min-width: 650px) {
+  .part-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 980px) {
+  .part-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .part-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  .part-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .pageModifier {
@@ -100,20 +132,9 @@
   font-weight: 700;
 }
 
-
-/* Client review: keep cards the same width for normal Browse and filtered results. */
-@media (max-width: 420px) {
+@media (max-width: 649px) {
   .part-grid {
-    grid-template-columns: minmax(0, 1fr);
-    padding-inline: 12px;
-  }
-}
-
-/* Step 22.1: keep a full 10-item page on one row on wide desktop screens. */
-@media (min-width: 1800px) {
-  .part-grid {
-    grid-template-columns: repeat(10, minmax(0, 1fr));
-    gap: 14px;
-    padding-inline: 20px;
+    gap: 18px;
+    padding: 16px 12px;
   }
 }

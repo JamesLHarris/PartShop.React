@@ -165,6 +165,13 @@ function CustomerPartDetails() {
       availableId: p.availableId ?? get(p, "available", "id"),
       conditionId: p.conditionId ?? get(p, "condition", "id"),
       conditionName: p.conditionName ?? get(p, "condition", "name"),
+      shippingPolicyId:
+        p.shippingPolicyId ?? get(p, "shippingPolicy", "id"),
+      shippingPolicyName:
+        p.shippingPolicyName ?? get(p, "shippingPolicy", "name"),
+      allowsOnlineCheckout:
+        (p.allowsOnlineCheckout ??
+          get(p, "shippingPolicy", "allowsOnlineCheckout")) !== false,
       price: priceValue,
       unitPrice: Number(p.price) || 0,
       description: p.description,
@@ -173,7 +180,12 @@ function CustomerPartDetails() {
       quantitySold: Number(p.quantitySold) || 0,
       canCheckout:
         (p.availableStatus ?? get(p, "available", "status")) === "Available" &&
-        Number(p.quantity) > 0,
+        Number(p.quantity) > 0 &&
+        (p.allowsOnlineCheckout ??
+          get(p, "shippingPolicy", "allowsOnlineCheckout")) !== false,
+      requiresShippingQuote:
+        (p.allowsOnlineCheckout ??
+          get(p, "shippingPolicy", "allowsOnlineCheckout")) === false,
       dateCreated: p.datecreated ?? p.dateCreated,
       dateModified: p.datemodified ?? p.dateModified,
       categories: normalizedCategories,
@@ -215,10 +227,16 @@ function CustomerPartDetails() {
   };
 
   const handleContactAboutPart = () => {
+    const isShippingQuote = vm.requiresShippingQuote;
     const searchParams = new URLSearchParams({
-      inquiryType: "parts",
+      inquiryType: isShippingQuote ? "shipping" : "parts",
       partId: String(vm.id),
-      subject: `Question about part ${vm.name}`,
+      subject: isShippingQuote
+        ? `Shipping quote request: ${vm.name}`
+        : `Question about part ${vm.name}`,
+      message: isShippingQuote
+        ? `I am interested in ${vm.name} (Part ID #${vm.id}). Please provide a shipping quote and instructions for purchasing this item directly.`
+        : `I have a question about ${vm.name} (Part ID #${vm.id}).`,
     });
 
     navigate(`/contact?${searchParams.toString()}`);
@@ -240,7 +258,7 @@ function CustomerPartDetails() {
   };
 
   return (
-    <div className="admin-part-details">
+    <div className="admin-part-details admin-part-details--customer">
       <header className="apd-header apd-header--customer">
         <div className="apd-title">
           <h2>{vm.name}</h2>
@@ -271,36 +289,93 @@ function CustomerPartDetails() {
       </header>
 
       <section className="apd-grid apd-grid--customer">
-        <aside className="apd-card apd-media">
-          {galleryMain ? (
-            <img src={galleryMain} alt={vm.name} className="apd-photo" />
-          ) : (
-            <div className="apd-photo apd-photo--empty">No Image</div>
-          )}
-
-          {images.length > 1 && (
-            <div className="apd-gallery">
-              <div className="apd-gallery__label">Photos</div>
-              <div className="apd-thumbs">
-                {images.map((img) => {
-                  const src = buildImageUrl(img.url);
-                  const key = img.id || img.url;
-
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className="apd-thumb"
-                      title={img.isPrimary ? "Primary" : ""}
-                      onClick={() => setActiveImage(src)}
-                    >
-                      <img src={src} alt={vm.name} />
-                    </button>
-                  );
-                })}
-              </div>
+        <div className="apd-customer-main">
+          <aside className="apd-card apd-media apd-media--customer">
+            <div className="apd-main-image-container">
+              {galleryMain ? (
+                <img src={galleryMain} alt={vm.name} className="apd-photo" />
+              ) : (
+                <div className="apd-photo apd-photo--empty">No Image</div>
+              )}
             </div>
-          )}
+
+            {images.length > 1 && (
+              <div className="apd-gallery">
+                <div className="apd-gallery__label">Photos</div>
+                <div className="apd-thumbs">
+                  {images.map((img) => {
+                    const src = buildImageUrl(img.url);
+                    const key = img.id || img.url;
+                    const isActive = src === galleryMain;
+
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`apd-thumb ${isActive ? "apd-thumb--active" : ""}`}
+                        title={img.isPrimary ? "Primary" : ""}
+                        aria-pressed={isActive}
+                        onClick={() => setActiveImage(src)}
+                      >
+                        <img src={src} alt={vm.name} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </aside>
+
+          <article className="apd-card apd-specs">
+            <h3>Specs</h3>
+            <dl className="apd-dl">
+              <div>
+                <dt>Part #</dt>
+                <dd>{vm.partNumber || "—"}</dd>
+              </div>
+              <div>
+                <dt>Year(s)</dt>
+                <dd>{vm.year || "—"}</dd>
+              </div>
+              <div>
+                <dt>Condition</dt>
+                <dd>{vm.conditionName || "—"}</dd>
+              </div>
+              <div>
+                <dt>Primary Category</dt>
+                <dd>{vm.category || "—"}</dd>
+              </div>
+              <div>
+                <dt>Primary Make</dt>
+                <dd>{vm.company || "—"}</dd>
+              </div>
+              <div>
+                <dt>Primary Model</dt>
+                <dd>{vm.model || "—"}</dd>
+              </div>
+            </dl>
+
+            <div className="apd-desc">
+              <h4>Description</h4>
+              <p className="apd-text">{vm.description || "No description."}</p>
+
+              {vm.requiresShippingQuote && (
+                <p className="apd-description-shipping-note" role="note">
+                  <strong>
+                    Custom shipping quote required. Due to this item&apos;s size,
+                    weight, or handling requirements, it is not available through
+                    Shopify checkout. Contact GR &amp; Sons to arrange shipping and
+                    purchase directly.
+                  </strong>
+                </p>
+              )}
+            </div>
+          </article>
+        </div>
+
+        <div className="apd-customer-side">
+          <aside className="apd-card apd-purchase-card">
+            <h3>Purchase Details</h3>
 
           <div className="apd-dl apd-dl--stack">
             <div>
@@ -329,129 +404,136 @@ function CustomerPartDetails() {
             </div>
           )}
 
+          {vm.requiresShippingQuote && (
+            <div className="apd-shipping-quote" role="note">
+              <strong>Custom shipping quote required</strong>
+              <span>
+                Due to this item&apos;s size, weight, or handling requirements,
+                it is not available through Shopify checkout. Contact GR &amp;
+                Sons to arrange shipping and purchase directly.
+              </span>
+            </div>
+          )}
+
           <div className="apd-actions apd-actions--stacked">
-            <button
-              className="apd-btn"
-              onClick={handleBuyNow}
-              disabled={!vm.canCheckout || checkingOut}
-            >
-              {checkingOut ? "Starting Checkout..." : "Buy Now"}
-            </button>
-            <button
-              className="apd-btn apd-btn--outlined"
-              onClick={handleAdd}
-              disabled={!vm.canCheckout}
-            >
-              Add to Cart
-            </button>
-            <button
-              type="button"
-              className="apd-btn apd-btn--outlined"
-              onClick={handleContactAboutPart}
-            >
-              Contact About This Part
-            </button>
-          </div>
-        </aside>
-
-        <article className="apd-card apd-specs">
-          <h3>Specs</h3>
-          <dl className="apd-dl">
-            <div>
-              <dt>Part #</dt>
-              <dd>{vm.partNumber || "—"}</dd>
-            </div>
-            <div>
-              <dt>Year(s)</dt>
-              <dd>{vm.year || "—"}</dd>
-            </div>
-            <div>
-              <dt>Condition</dt>
-              <dd>{vm.conditionName || "—"}</dd>
-            </div>
-            <div>
-              <dt>Primary Category</dt>
-              <dd>{vm.category || "—"}</dd>
-            </div>
-            <div>
-              <dt>Primary Make</dt>
-              <dd>{vm.company || "—"}</dd>
-            </div>
-            <div>
-              <dt>Primary Model</dt>
-              <dd>{vm.model || "—"}</dd>
-            </div>
-          </dl>
-
-          <div className="apd-desc">
-            <h4>Description</h4>
-            <p className="apd-text">{vm.description || "No description."}</p>
-          </div>
-        </article>
-
-        <article className="apd-card apd-relations">
-          <h3>Compatibility & Categories</h3>
-
-          <div className="apd-relations-section">
-            <h4>Categories</h4>
-            {vm.categories.length > 0 ? (
-              <div className="apd-chip-list">
-                {vm.categories.map((cat) => (
-                  <span
-                    key={cat.id || `${cat.catagoryId}-${cat.catagoryName}`}
-                    className="apd-chip"
-                  >
-                    {cat.catagoryName || `Category #${cat.catagoryId}`}
-                  </span>
-                ))}
-              </div>
+            {vm.requiresShippingQuote ? (
+              <button
+                type="button"
+                className="apd-btn"
+                onClick={handleContactAboutPart}
+              >
+                Contact for Shipping Quote
+              </button>
             ) : (
-              <div className="apd-empty-note">No related categories.</div>
-            )}
-          </div>
-
-          <div className="apd-relations-section">
-            <h4>Compatibility</h4>
-            {vm.fitments.length > 0 ? (
-              <div className="apd-fitment-list">
-                {vm.fitments.map((fitment) => (
-                  <div
-                    key={
-                      fitment.id ||
-                      `${fitment.makeId}-${fitment.modelId}-${fitment.yearStart}-${fitment.yearEnd}`
-                    }
-                    className="apd-fitment-card"
+              <>
+                <button
+                  className="apd-btn"
+                  onClick={handleBuyNow}
+                  disabled={!vm.canCheckout || checkingOut}
+                >
+                  {checkingOut ? "Starting Checkout..." : "Buy Now"}
+                </button>
+                <button
+                  className="apd-btn apd-btn--outlined apd-btn--with-icon"
+                  onClick={handleAdd}
+                  disabled={!vm.canCheckout}
+                >
+                  <svg
+                    className="apd-btn__icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
                   >
-                    <div className="apd-fitment-title">
-                      {fitment.company || "—"} {fitment.modelName || ""}
-                    </div>
-                    <div className="apd-subtle">
-                      Years:{" "}
-                      {renderYearRange(fitment.yearStart, fitment.yearEnd)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="apd-empty-note">No compatibility records.</div>
+                    <path
+                      d="M3 4h2l2.25 10.25a2 2 0 0 0 1.95 1.57h7.92a2 2 0 0 0 1.94-1.52L21 7H7"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="10" cy="20" r="1.25" fill="currentColor" />
+                    <circle cx="18" cy="20" r="1.25" fill="currentColor" />
+                  </svg>
+                  <span>Add to Cart</span>
+                </button>
+                <button
+                  type="button"
+                  className="apd-btn apd-btn--outlined"
+                  onClick={handleContactAboutPart}
+                >
+                  Contact About This Part
+                </button>
+              </>
             )}
-          </div>
-        </article>
+            </div>
+          </aside>
 
-        <article
-          className={`apd-card apd-policy-card apd-policy-card--${conditionPolicy.key}`}
-        >
-          <h3>{conditionPolicy.title}</h3>
-          <p className="apd-policy-summary">{conditionPolicy.summary}</p>
-          <ul className="apd-policy-list">
-            {conditionPolicy.bullets.map((bullet) => (
-              <li key={bullet}>{bullet}</li>
-            ))}
-          </ul>
-          <Link className="apd-policy-link" to="/policies">
-            Review all purchasing and return policies
-          </Link>
-        </article>
+          <article
+            className={`apd-card apd-policy-card apd-policy-card--${conditionPolicy.key}`}
+          >
+            <h3>{conditionPolicy.title}</h3>
+            <p className="apd-policy-summary">{conditionPolicy.summary}</p>
+            <ul className="apd-policy-list">
+              {conditionPolicy.bullets.map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+            <Link className="apd-policy-link" to="/policies">
+              Review all purchasing and return policies
+            </Link>
+          </article>
+
+          <article className="apd-card apd-relations">
+            <h3>Compatibility & Categories</h3>
+
+            <div className="apd-relations-section">
+              <h4>Categories</h4>
+              {vm.categories.length > 0 ? (
+                <div className="apd-chip-list">
+                  {vm.categories.map((cat) => (
+                    <span
+                      key={cat.id || `${cat.catagoryId}-${cat.catagoryName}`}
+                      className="apd-chip"
+                    >
+                      {cat.catagoryName || `Category #${cat.catagoryId}`}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="apd-empty-note">No related categories.</div>
+              )}
+            </div>
+
+            <div className="apd-relations-section">
+              <h4>Compatibility</h4>
+              {vm.fitments.length > 0 ? (
+                <div className="apd-fitment-list">
+                  {vm.fitments.map((fitment) => (
+                    <div
+                      key={
+                        fitment.id ||
+                        `${fitment.makeId}-${fitment.modelId}-${fitment.yearStart}-${fitment.yearEnd}`
+                      }
+                      className="apd-fitment-card"
+                    >
+                      <div className="apd-fitment-title">
+                        {fitment.company || "—"} {fitment.modelName || ""}
+                      </div>
+                      <div className="apd-subtle">
+                        Years:{" "}
+                        {renderYearRange(fitment.yearStart, fitment.yearEnd)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="apd-empty-note">No compatibility records.</div>
+              )}
+            </div>
+          </article>
+        </div>
+
       </section>
 
     </div>

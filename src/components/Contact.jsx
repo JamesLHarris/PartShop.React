@@ -34,6 +34,7 @@ function Contact() {
     ...initialFormData,
     inquiryType: searchParams.get("inquiryType") || initialFormData.inquiryType,
     subject: searchParams.get("subject") || "",
+    message: searchParams.get("message") || "",
   }));
   const [isSubmitting, setIsSubmitting] = useState(false);
 

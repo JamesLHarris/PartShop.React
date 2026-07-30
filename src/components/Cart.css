@@ -1,17 +1,34 @@
-/* Cart icon */
+/* Header checkout control */
 .cart-icon {
   position: relative;
-  padding: 8px 12px;
+  display: inline-flex;
+  min-height: 42px;
+  padding: 8px 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid var(--site-border, #444);
   border-radius: var(--site-radius-md, 10px);
   background: var(--site-surface-secondary, #1f1f1f);
   color: var(--site-text, #eaeaea);
+  font: inherit;
+  font-weight: 700;
   cursor: pointer;
 }
 
+.cart-icon:hover {
+  filter: brightness(1.08);
+}
+
 .cart-icon__glyph {
-  font-size: 18px;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+.cart-icon__label {
   line-height: 1;
+  white-space: nowrap;
 }
 
 .cart-icon__badge {
@@ -352,5 +369,11 @@
   .cart-line__img {
     width: 100%;
     height: 150px;
+  }
+}
+
+@media (max-width: 860px) {
+  .header-cart-control .cart-icon {
+    width: 100%;
   }
 }
