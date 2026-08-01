@@ -672,3 +672,40 @@
     grid-column: auto;
   }
 }
+
+/* Website sale banner builder */
+.discounts-banner-builder {
+  border: 1px solid #334b68;
+  border-radius: 12px;
+  background: #101822;
+  padding: 16px;
+}
+
+.discounts-banner-fields {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.discounts-banner-preview {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #21385f, #315887);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.discounts-banner-preview > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 760px) {
+  .discounts-banner-fields { grid-template-columns: 1fr; }
+  .discounts-banner-preview { align-items: flex-start; flex-direction: column; }
+}

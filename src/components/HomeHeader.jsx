@@ -14,6 +14,35 @@ import { useCart } from "./CartContext";
 import shopifyCheckoutService from "../service/shopifyCheckoutService";
 import loginService from "../service/loginService";
 
+const cleanIds = (values = []) =>
+  Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map(Number)
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  ).sort((left, right) => left - right);
+
+const buildBrowsePath = (filters = {}) => {
+  const params = new URLSearchParams();
+  const q = String(filters.q ?? "").trim();
+
+  if (q) params.set("q", q);
+  if (filters.makeId) params.set("makeId", String(filters.makeId));
+  if (filters.modelId) params.set("modelId", String(filters.modelId));
+
+  cleanIds(filters.categoryIds).forEach((id) =>
+    params.append("categoryIds", String(id)),
+  );
+
+  cleanIds(filters.conditionIds).forEach((id) =>
+    params.append("conditionIds", String(id)),
+  );
+
+  const query = params.toString();
+  return `/browse${query ? `?${query}` : ""}`;
+};
+
 function HomeHeader({ value, onChange }) {
   const idOf = (item) => item?.id ?? item?.Id;
   const { items, registerPendingCheckout } = useCart();
@@ -188,6 +217,8 @@ function HomeHeader({ value, onChange }) {
       makeId: null,
       modelId: null,
       categoryId: null,
+      categoryIds: [],
+      conditionIds: [],
       q: "",
     });
     closeMobileMenu();
@@ -197,9 +228,12 @@ function HomeHeader({ value, onChange }) {
   const submitSearch = (event) => {
     event.preventDefault();
 
-    onChange?.({ q: (searchText ?? "").trim() });
+    const q = (searchText ?? "").trim();
+    const nextFilters = { ...value, q };
+
+    onChange?.({ q });
     closeMobileMenu();
-    navigate("/browse");
+    navigate(buildBrowsePath(nextFilters));
   };
 
   const handleBrowseClick = (event) => {
@@ -211,45 +245,55 @@ function HomeHeader({ value, onChange }) {
     if (!onChange) return;
 
     setSearchText("");
-    onChange({
+    const nextFilters = {
+      ...value,
       makeId: idOf(make) ?? null,
       modelId: null,
       categoryId: null,
+      categoryIds: [],
       q: "",
-    });
+    };
 
+    onChange(nextFilters);
     closeMobileMenu();
-    navigate("/browse");
+    navigate(buildBrowsePath(nextFilters));
   };
 
   const handleModelSelect = (make, model) => {
     if (!onChange) return;
 
     setSearchText("");
-    onChange({
+    const nextFilters = {
+      ...value,
       makeId: model?.makeId ?? model?.MakeId ?? idOf(make) ?? null,
       modelId: idOf(model) ?? null,
       categoryId: null,
+      categoryIds: [],
       q: "",
-    });
+    };
 
+    onChange(nextFilters);
     closeMobileMenu();
-    navigate("/browse");
+    navigate(buildBrowsePath(nextFilters));
   };
 
   const handleCategorySelect = (category) => {
     if (!onChange) return;
 
-    setSearchText("");
-    onChange({
-      categoryId: idOf(category) ?? null,
+    const categoryId = idOf(category) ?? null;
+    const nextFilters = {
+      ...value,
+      categoryId,
+      categoryIds: categoryId ? [categoryId] : [],
       makeId: null,
       modelId: null,
       q: "",
-    });
+    };
 
+    setSearchText("");
+    onChange(nextFilters);
     closeMobileMenu();
-    navigate(`/browse?categoryId=${idOf(category)}`);
+    navigate(buildBrowsePath(nextFilters));
   };
 
   const handleCategoryOverview = () => {

@@ -134,13 +134,15 @@ function CategoryLanding() {
 
     handleHeaderChange?.({
       categoryId,
+      categoryIds: [categoryId],
+      conditionIds: [],
       makeId: null,
       modelId: null,
       q: "",
     });
     setPageIndex?.(0);
 
-    navigate(`/browse?categoryId=${categoryId}`);
+    navigate(`/browse?categoryIds=${categoryId}`);
   };
 
   return (

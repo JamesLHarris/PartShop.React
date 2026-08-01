@@ -139,21 +139,60 @@ const getByModelCustomer = (pageIndex, pageSize, modelId) => {
 };
 
 const searchPart = (params = {}) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== null && item !== undefined && item !== "") {
+          searchParams.append(key, String(item));
+        }
+      });
+      return;
+    }
+
+    searchParams.append(key, String(value));
+  });
+
+  const query = searchParams.toString();
   const config = {
     method: "GET",
-    url: `${homeEndpoint}/search`,
-    params,
+    url: `${homeEndpoint}/search${query ? `?${query}` : ""}`,
     withCredentials: true,
     crossdomain: true,
   };
+
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
 const customerSearch = (params = {}) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== null && item !== undefined && item !== "") {
+          searchParams.append(key, String(item));
+        }
+      });
+      return;
+    }
+
+    searchParams.append(key, String(value));
+  });
+
+  const query = searchParams.toString();
   const config = {
     method: "GET",
-    url: `${homeEndpoint}/search/customer`,
-    params,
+    url: `${homeEndpoint}/search/customer${query ? `?${query}` : ""}`,
     withCredentials: true,
     crossdomain: true,
   };

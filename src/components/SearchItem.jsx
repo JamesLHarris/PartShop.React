@@ -1,6 +1,8 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
 import toastr from "toastr";
+import catagoryService from "../service/catagoryService";
+import conditionService from "../service/conditionService";
 import partsService from "../service/partsService";
 import AdminCard from "./AdminCard";
 import "./PartsBrowse.css";
@@ -14,11 +16,58 @@ const normalizeSearchText = (value) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 
+const idOf = (item) =>
+  Number(
+    item?.id ??
+      item?.Id ??
+      item?.categoryId ??
+      item?.CategoryId ??
+      item?.catagoryId ??
+      item?.CatagoryId ??
+      item?.conditionId ??
+      item?.ConditionId,
+  );
+
+const nameOf = (item) =>
+  String(
+    item?.name ??
+      item?.Name ??
+      item?.categoryName ??
+      item?.CategoryName ??
+      item?.catagoryName ??
+      item?.CatagoryName ??
+      item?.conditionName ??
+      item?.ConditionName ??
+      "Unnamed",
+  ).trim();
+
+const cleanIds = (values = []) =>
+  Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map(Number)
+        .filter((value) => Number.isInteger(value) && value > 0),
+    ),
+  ).sort((left, right) => left - right);
+
+const toggleId = (values, id) => {
+  const current = cleanIds(values);
+  return current.includes(id)
+    ? current.filter((value) => value !== id)
+    : [...current, id].sort((left, right) => left - right);
+};
+
 function SearchItem() {
   const [formData, setFormData] = useState({
     name: "",
     partNumber: "",
   });
+
+  const [categories, setCategories] = useState([]);
+  const [conditions, setConditions] = useState([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+  const [selectedConditionIds, setSelectedConditionIds] = useState([]);
+  const [areFiltersLoading, setAreFiltersLoading] = useState(true);
 
   const [results, setResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -27,6 +76,74 @@ function SearchItem() {
   const [pageSize, setPageSize] = useState(20);
 
   const requestSequence = useRef(0);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.allSettled([
+      catagoryService.getAllCatagories(),
+      conditionService.getAllConditions(),
+    ]).then(([categoryResult, conditionResult]) => {
+      if (!isMounted) {
+        return;
+      }
+
+      setCategories(
+        categoryResult.status === "fulfilled" &&
+          Array.isArray(categoryResult.value?.item)
+          ? categoryResult.value.item
+          : [],
+      );
+
+      setConditions(
+        conditionResult.status === "fulfilled" &&
+          Array.isArray(conditionResult.value?.item)
+          ? conditionResult.value.item
+          : [],
+      );
+
+      setAreFiltersLoading(false);
+
+      if (
+        categoryResult.status === "rejected" ||
+        conditionResult.status === "rejected"
+      ) {
+        toastr.warning(
+          "Some inventory filters could not be loaded.",
+          "Filters",
+        );
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      requestSequence.current += 1;
+    };
+  }, []);
+
+  const sortedCategories = useMemo(
+    () =>
+      categories
+        .filter((item) => idOf(item) > 0 && nameOf(item))
+        .sort((left, right) =>
+          nameOf(left).localeCompare(nameOf(right), undefined, {
+            sensitivity: "base",
+          }),
+        ),
+    [categories],
+  );
+
+  const sortedConditions = useMemo(
+    () =>
+      conditions
+        .filter((item) => idOf(item) > 0 && nameOf(item))
+        .sort((left, right) =>
+          nameOf(left).localeCompare(nameOf(right), undefined, {
+            sensitivity: "base",
+          }),
+        ),
+    [conditions],
+  );
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -37,18 +154,32 @@ function SearchItem() {
     }));
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (isLoading) {
-      return;
-    }
-
+  const executeSearch = async ({
+    categoryIds = selectedCategoryIds,
+    conditionIds = selectedConditionIds,
+    showEmptyCriteriaMessage = true,
+  } = {}) => {
     const nameQuery = formData.name.trim();
     const partNumberQuery = formData.partNumber.trim();
+    const cleanCategoryIds = cleanIds(categoryIds);
+    const cleanConditionIds = cleanIds(conditionIds);
 
-    if (!nameQuery && !partNumberQuery) {
-      toastr.info("Enter a part name or part number.");
+    const hasCriteria =
+      Boolean(nameQuery) ||
+      Boolean(partNumberQuery) ||
+      cleanCategoryIds.length > 0 ||
+      cleanConditionIds.length > 0;
+
+    if (!hasCriteria) {
+      if (showEmptyCriteriaMessage) {
+        toastr.info(
+          "Enter a part name or part number, or select a category or condition.",
+        );
+      }
+
+      setResults([]);
+      setHasSearched(false);
+      setPageIndex(0);
       return;
     }
 
@@ -59,13 +190,15 @@ function SearchItem() {
 
     try {
       /*
-       * The admin search endpoint accepts a single q value and searches names,
-       * part numbers, makes, models, and categories. Use whichever field is
-       * populated first, then apply the second field locally when both are
-       * supplied.
+       * The admin endpoint accepts one general q value. When both text fields
+       * are supplied, use the name for the server search and apply the part
+       * number as a second local refinement. Category and condition lists are
+       * always applied by SQL so multi-select results are complete.
        */
       const response = await partsService.searchPart({
         q: nameQuery || partNumberQuery,
+        categoryIds: cleanCategoryIds,
+        conditionIds: cleanConditionIds,
       });
 
       if (sequence !== requestSequence.current) {
@@ -77,13 +210,10 @@ function SearchItem() {
         : [];
 
       if (nameQuery && partNumberQuery) {
-        const normalizedPartNumber =
-          normalizeSearchText(partNumberQuery);
+        const normalizedPartNumber = normalizeSearchText(partNumberQuery);
 
         nextResults = nextResults.filter((part) =>
-          normalizeSearchText(part.partNumber).includes(
-            normalizedPartNumber,
-          ),
+          normalizeSearchText(part.partNumber).includes(normalizedPartNumber),
         );
       }
 
@@ -107,12 +237,66 @@ function SearchItem() {
     }
   };
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (!isLoading) {
+      executeSearch();
+    }
+  };
+
+  const handleToggleCategory = (categoryId) => {
+    if (isLoading) {
+      return;
+    }
+
+    const nextIds = toggleId(selectedCategoryIds, categoryId);
+    setSelectedCategoryIds(nextIds);
+    executeSearch({ categoryIds: nextIds });
+  };
+
+  const handleToggleCondition = (conditionId) => {
+    if (isLoading) {
+      return;
+    }
+
+    const nextIds = toggleId(selectedConditionIds, conditionId);
+    setSelectedConditionIds(nextIds);
+    executeSearch({ conditionIds: nextIds });
+  };
+
+  const handleClearFilters = () => {
+    if (isLoading) {
+      return;
+    }
+
+    setSelectedCategoryIds([]);
+    setSelectedConditionIds([]);
+
+    const hasText = formData.name.trim() || formData.partNumber.trim();
+
+    if (hasText) {
+      executeSearch({
+        categoryIds: [],
+        conditionIds: [],
+        showEmptyCriteriaMessage: false,
+      });
+    } else {
+      requestSequence.current += 1;
+      setResults([]);
+      setHasSearched(false);
+      setPageIndex(0);
+    }
+  };
+
   const handleClear = () => {
     requestSequence.current += 1;
     setFormData({
       name: "",
       partNumber: "",
     });
+    setSelectedCategoryIds([]);
+    setSelectedConditionIds([]);
     setResults([]);
     setHasSearched(false);
     setIsLoading(false);
@@ -148,6 +332,9 @@ function SearchItem() {
     setPageIndex(0);
   };
 
+  const hasFilterSelections =
+    selectedCategoryIds.length > 0 || selectedConditionIds.length > 0;
+
   return (
     <main className="locate-part-page">
       <section
@@ -158,8 +345,8 @@ function SearchItem() {
           <p className="locate-part-eyebrow">Admin Inventory</p>
           <h1 id="locate-part-title">Locate Part</h1>
           <p>
-            Search by part name, part number, or both. Press Enter from either
-            field to run the search.
+            Search by part name, part number, category, condition, or any
+            combination of those options.
           </p>
         </div>
 
@@ -208,13 +395,120 @@ function SearchItem() {
               disabled={
                 isLoading &&
                 !formData.name &&
-                !formData.partNumber
+                !formData.partNumber &&
+                !hasFilterSelections
               }
             >
               Clear
             </button>
           </div>
         </form>
+
+        <section
+          className="locate-filter-panel"
+          aria-labelledby="locate-filter-title"
+        >
+          <div className="locate-filter-heading">
+            <div>
+              <h2 id="locate-filter-title">Refine Inventory</h2>
+              <p>
+                Multiple selections in the same row are matched as “or.” The
+                category and condition rows are combined as “and.”
+              </p>
+            </div>
+
+            {hasFilterSelections && (
+              <button
+                type="button"
+                className="locate-filter-clear"
+                onClick={handleClearFilters}
+                disabled={isLoading}
+              >
+                Clear category &amp; condition
+              </button>
+            )}
+          </div>
+
+          {areFiltersLoading ? (
+            <div className="locate-filter-loading" role="status">
+              Loading inventory filters…
+            </div>
+          ) : (
+            <div className="locate-filter-groups">
+              <div className="locate-filter-group">
+                <div className="locate-filter-label">
+                  <span>Categories</span>
+                  {selectedCategoryIds.length > 0 && (
+                    <small>{selectedCategoryIds.length} selected</small>
+                  )}
+                </div>
+
+                <div
+                  className="locate-filter-chips"
+                  aria-label="Admin category filters"
+                >
+                  {sortedCategories.map((category) => {
+                    const categoryId = idOf(category);
+                    const selected =
+                      selectedCategoryIds.includes(categoryId);
+
+                    return (
+                      <button
+                        key={categoryId}
+                        type="button"
+                        className={`locate-filter-chip ${
+                          selected ? "is-selected" : ""
+                        }`}
+                        aria-pressed={selected}
+                        onClick={() => handleToggleCategory(categoryId)}
+                        disabled={isLoading}
+                      >
+                        {nameOf(category)}
+                        {selected ? <span aria-hidden="true">✓</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="locate-filter-group">
+                <div className="locate-filter-label">
+                  <span>Condition</span>
+                  {selectedConditionIds.length > 0 && (
+                    <small>{selectedConditionIds.length} selected</small>
+                  )}
+                </div>
+
+                <div
+                  className="locate-filter-chips"
+                  aria-label="Admin condition filters"
+                >
+                  {sortedConditions.map((condition) => {
+                    const conditionId = idOf(condition);
+                    const selected =
+                      selectedConditionIds.includes(conditionId);
+
+                    return (
+                      <button
+                        key={conditionId}
+                        type="button"
+                        className={`locate-filter-chip ${
+                          selected ? "is-selected" : ""
+                        }`}
+                        aria-pressed={selected}
+                        onClick={() => handleToggleCondition(conditionId)}
+                        disabled={isLoading}
+                      >
+                        {nameOf(condition)}
+                        {selected ? <span aria-hidden="true">✓</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
       </section>
 
       <section
@@ -231,7 +525,7 @@ function SearchItem() {
                   ? `${results.length} part${
                       results.length === 1 ? "" : "s"
                     } found`
-                  : "Enter search criteria above."}
+                  : "Enter search criteria or select filters above."}
             </p>
           </div>
 
@@ -261,12 +555,12 @@ function SearchItem() {
           </div>
         ) : !hasSearched ? (
           <div className="locate-part-message">
-            Results will appear here after a search.
+            Results will appear here after a search or filter selection.
           </div>
         ) : results.length === 0 ? (
           <div className="empty-state locate-part-empty-state">
             <h3>No parts found</h3>
-            <p>Try a broader name or verify the part number.</p>
+            <p>Try broader text or remove one of the selected filters.</p>
           </div>
         ) : (
           <>
@@ -301,9 +595,7 @@ function SearchItem() {
                     <button
                       type="button"
                       onClick={() =>
-                        setPageIndex((current) =>
-                          Math.max(0, current - 1),
-                        )
+                        setPageIndex((current) => Math.max(0, current - 1))
                       }
                       disabled={pageIndex === 0 || isLoading}
                     >
@@ -330,23 +622,18 @@ function SearchItem() {
                         className={page === pageIndex ? "active" : ""}
                         onClick={() => setPageIndex(page)}
                         disabled={isLoading}
-                        aria-current={
-                          page === pageIndex ? "page" : undefined
-                        }
+                        aria-current={page === pageIndex ? "page" : undefined}
                       >
                         {page + 1}
                       </button>
                     ))}
 
-                    {pageNumbers[pageNumbers.length - 1] <
-                      totalPages - 1 && (
+                    {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
                       <>
                         <span className="page-ellipsis">…</span>
                         <button
                           type="button"
-                          onClick={() =>
-                            setPageIndex(totalPages - 1)
-                          }
+                          onClick={() => setPageIndex(totalPages - 1)}
                           disabled={isLoading}
                         >
                           {totalPages}
@@ -361,9 +648,7 @@ function SearchItem() {
                           Math.min(totalPages - 1, current + 1),
                         )
                       }
-                      disabled={
-                        pageIndex >= totalPages - 1 || isLoading
-                      }
+                      disabled={pageIndex >= totalPages - 1 || isLoading}
                     >
                       Next
                     </button>

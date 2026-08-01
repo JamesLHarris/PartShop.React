@@ -26,6 +26,12 @@ const initialCreateForm = {
   usageLimit: 1,
   oncePerCustomer: true,
   adminNotes: "",
+  showSiteBanner: false,
+  bannerHeadline: "",
+  bannerMessage: "",
+  bannerLinkText: "Shop Sale",
+  bannerLinkUrl: "/browse",
+  bannerPriority: 0,
 };
 
 const initialFilters = {
@@ -329,6 +335,46 @@ function AdminDiscounts() {
     setPartSearch({ q: "", partNumber: "" });
   };
 
+  const buildSuggestedBannerText = () => {
+    const discountText =
+      createForm.discountType === "Percentage"
+        ? `${Number(createForm.discountValue || 0).toLocaleString()}%`
+        : formatCurrency(createForm.discountValue || 0);
+
+    const ruleWords = [];
+    if (selectedCondition) ruleWords.push(selectedCondition.name || selectedCondition.label);
+    if (selectedCategory) ruleWords.push(selectedCategory.name || selectedCategory.label);
+
+    const target =
+      createForm.appliesToType === "CollectionRule" && ruleWords.length > 0
+        ? `all ${ruleWords.join(" ")} parts`
+        : createForm.appliesToType === "General"
+          ? "all products"
+          : selectedPart?.name || "the selected item";
+
+    const endText = createForm.endsAtUtc
+      ? ` through ${new Date(createForm.endsAtUtc).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}`
+      : " while the sale is active";
+
+    return {
+      headline: createForm.title?.trim() || `${ruleWords.join(" ") || "Current"} Sale`,
+      message: `Use code ${createForm.code.trim().toUpperCase() || "SALECODE"} for ${discountText} off ${target}${endText}.`,
+      linkText: "Shop Sale",
+      linkUrl: selectedCategory ? `/browse?categoryId=${selectedCategory.id}` : "/browse",
+    };
+  };
+
+  const applySuggestedBannerText = () => {
+    const suggested = buildSuggestedBannerText();
+    setCreateForm((prev) => ({
+      ...prev,
+      bannerHeadline: suggested.headline,
+      bannerMessage: suggested.message,
+      bannerLinkText: suggested.linkText,
+      bannerLinkUrl: suggested.linkUrl,
+    }));
+  };
+
   const onCreateFormChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -337,6 +383,14 @@ function AdminDiscounts() {
         ...prev,
         [name]: type === "checkbox" ? checked : value,
       };
+
+      if (name === "showSiteBanner" && checked && !prev.bannerMessage) {
+        const suggested = buildSuggestedBannerText();
+        next.bannerHeadline = suggested.headline;
+        next.bannerMessage = suggested.message;
+        next.bannerLinkText = suggested.linkText;
+        next.bannerLinkUrl = suggested.linkUrl;
+      }
 
       if (name === "appliesToType") {
         if (value !== "Part") {
@@ -446,6 +500,11 @@ function AdminDiscounts() {
       return false;
     }
 
+    if (createForm.showSiteBanner && !createForm.bannerMessage.trim()) {
+      toastr.warning("Enter a website banner message.");
+      return false;
+    }
+
     return true;
   };
 
@@ -505,6 +564,22 @@ function AdminDiscounts() {
       usageLimit: Number(createForm.usageLimit) || 1,
       oncePerCustomer: Boolean(createForm.oncePerCustomer),
       adminNotes: emptyToNull(createForm.adminNotes?.trim()),
+      showSiteBanner: Boolean(createForm.showSiteBanner),
+      bannerHeadline: createForm.showSiteBanner
+        ? emptyToNull(createForm.bannerHeadline?.trim())
+        : null,
+      bannerMessage: createForm.showSiteBanner
+        ? emptyToNull(createForm.bannerMessage?.trim())
+        : null,
+      bannerLinkText: createForm.showSiteBanner
+        ? emptyToNull(createForm.bannerLinkText?.trim())
+        : null,
+      bannerLinkUrl: createForm.showSiteBanner
+        ? emptyToNull(createForm.bannerLinkUrl?.trim())
+        : null,
+      bannerPriority: createForm.showSiteBanner
+        ? Number(createForm.bannerPriority) || 0
+        : 0,
     };
   };
 
@@ -1095,6 +1170,54 @@ function AdminDiscounts() {
             </label>
           </div>
 
+          <div className="discounts-banner-builder full-width">
+            <div className="discounts-field checkbox-field">
+              <label>
+                <input
+                  type="checkbox"
+                  name="showSiteBanner"
+                  checked={createForm.showSiteBanner}
+                  onChange={onCreateFormChange}
+                />
+                Display this sale in the customer website banner
+              </label>
+            </div>
+
+            {createForm.showSiteBanner ? (
+              <>
+                <div className="discounts-banner-fields">
+                  <div className="discounts-field">
+                    <label>Banner Headline</label>
+                    <input name="bannerHeadline" value={createForm.bannerHeadline} onChange={onCreateFormChange} placeholder="Used Engine Sale" />
+                  </div>
+                  <div className="discounts-field">
+                    <label>Priority</label>
+                    <input type="number" min="0" name="bannerPriority" value={createForm.bannerPriority} onChange={onCreateFormChange} />
+                  </div>
+                  <div className="discounts-field full-width">
+                    <label>Banner Message</label>
+                    <textarea name="bannerMessage" rows="3" value={createForm.bannerMessage} onChange={onCreateFormChange} placeholder="Use code ENGINEJUNE26 for 10% off all Used Engine parts through June 30." />
+                  </div>
+                  <div className="discounts-field">
+                    <label>Link Text</label>
+                    <input name="bannerLinkText" value={createForm.bannerLinkText} onChange={onCreateFormChange} placeholder="Shop Sale" />
+                  </div>
+                  <div className="discounts-field">
+                    <label>Link URL</label>
+                    <input name="bannerLinkUrl" value={createForm.bannerLinkUrl} onChange={onCreateFormChange} placeholder="/browse?categoryId=12" />
+                  </div>
+                </div>
+                <div className="discounts-banner-preview">
+                  <div>
+                    <strong>{createForm.bannerHeadline || "Sale"}</strong>
+                    <span>{createForm.bannerMessage || "Banner message preview"}</span>
+                  </div>
+                  <button className="discounts-btn secondary small" type="button" onClick={applySuggestedBannerText}>Use Suggested Text</button>
+                </div>
+              </>
+            ) : null}
+          </div>
+
           <div className="discounts-field full-width">
             <label>Admin Notes</label>
             <textarea
@@ -1547,6 +1670,37 @@ function AdminDiscounts() {
                     {selectedDiscount.shopifyDiscountGid || "-"}
                   </p>
                 </div>
+
+                <div>
+                  <strong>Website Banner</strong>
+                  <p>{selectedDiscount.showSiteBanner ? "Enabled" : "Disabled"}</p>
+                </div>
+
+                <div>
+                  <strong>Banner Priority</strong>
+                  <p>{selectedDiscount.bannerPriority ?? 0}</p>
+                </div>
+
+                {selectedDiscount.showSiteBanner ? (
+                  <>
+                    <div className="full-width">
+                      <strong>Banner Headline</strong>
+                      <p>{selectedDiscount.bannerHeadline || "-"}</p>
+                    </div>
+                    <div className="full-width">
+                      <strong>Banner Message</strong>
+                      <p className="break-text">{selectedDiscount.bannerMessage || "-"}</p>
+                    </div>
+                    <div>
+                      <strong>Banner Link Text</strong>
+                      <p>{selectedDiscount.bannerLinkText || "-"}</p>
+                    </div>
+                    <div>
+                      <strong>Banner Link URL</strong>
+                      <p className="break-text">{selectedDiscount.bannerLinkUrl || "-"}</p>
+                    </div>
+                  </>
+                ) : null}
 
                 <div className="full-width">
                   <strong>Admin Notes</strong>
