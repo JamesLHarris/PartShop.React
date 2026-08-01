@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import toastr from "toastr";
 import adminDiscountCodeService from "../service/adminDiscountCodeService";
+import catagoryService from "../service/catagoryService";
+import conditionService from "../service/conditionService";
 import partsService from "../service/partsService";
 import { API_HOST_PREFIX } from "../service/serviceHelpers";
 import "./AdminDiscounts.css";
@@ -14,6 +16,10 @@ const initialCreateForm = {
   partId: "",
   shopifyProductId: "",
   shopifyVariantId: "",
+  categoryId: "",
+  conditionId: "",
+  matchAllRules: true,
+  autoMaintainEligibility: true,
   customerEmail: "",
   startsAtUtc: "",
   endsAtUtc: "",
@@ -29,16 +35,29 @@ const initialFilters = {
 };
 
 const STATUS_OPTIONS = ["Draft", "Active", "Deactivated", "Expired", "Error"];
-const DISCOUNT_TYPES = ["Percentage", "FixedAmount"];
-const APPLIES_TO_TYPES = ["General", "Product", "Variant", "Part"];
+const DISCOUNT_TYPES = [
+  { value: "Percentage", label: "Percentage" },
+  { value: "FixedAmount", label: "Fixed amount" },
+];
+const APPLIES_TO_TYPES = [
+  { value: "General", label: "Entire store" },
+  { value: "Part", label: "Specific Site part" },
+  { value: "Product", label: "Specific Shopify product" },
+  { value: "Variant", label: "Specific Shopify variant" },
+  { value: "CollectionRule", label: "Category / condition rule" },
+];
 
 function AdminDiscounts() {
   const [discounts, setDiscounts] = useState([]);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
-
   const [createForm, setCreateForm] = useState(initialCreateForm);
   const [filters, setFilters] = useState(initialFilters);
   const [deactivateNotes, setDeactivateNotes] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [conditions, setConditions] = useState([]);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillResult, setBackfillResult] = useState(null);
 
   const [pageData, setPageData] = useState({
     pageIndex: 0,
@@ -56,14 +75,67 @@ function AdminDiscounts() {
     q: "",
     partNumber: "",
   });
-
   const [partResults, setPartResults] = useState([]);
   const [selectedPart, setSelectedPart] = useState(null);
   const [partSearchLoading, setPartSearchLoading] = useState(false);
 
-  const selectedIsDeactivated = useMemo(() => {
-    return selectedDiscount?.status === "Deactivated";
-  }, [selectedDiscount]);
+  const selectedIsDeactivated = useMemo(
+    () => selectedDiscount?.status === "Deactivated",
+    [selectedDiscount],
+  );
+
+  const selectedCategory = useMemo(
+    () =>
+      categories.find(
+        (category) => String(category.id) === String(createForm.categoryId),
+      ) || null,
+    [categories, createForm.categoryId],
+  );
+
+  const selectedCondition = useMemo(
+    () =>
+      conditions.find(
+        (condition) => String(condition.id) === String(createForm.conditionId),
+      ) || null,
+    [conditions, createForm.conditionId],
+  );
+
+  const collectionRulePreview = useMemo(() => {
+    const rules = [];
+
+    if (selectedCategory) {
+      rules.push(`Category: ${selectedCategory.name || selectedCategory.label}`);
+    }
+
+    if (selectedCondition) {
+      rules.push(`Condition: ${selectedCondition.name || selectedCondition.label}`);
+    }
+
+    return rules;
+  }, [selectedCategory, selectedCondition]);
+
+  const saleDuration = useMemo(() => {
+    if (!createForm.startsAtUtc || !createForm.endsAtUtc) {
+      return null;
+    }
+
+    const start = new Date(createForm.startsAtUtc);
+    const end = new Date(createForm.endsAtUtc);
+    const milliseconds = end.getTime() - start.getTime();
+
+    if (!Number.isFinite(milliseconds) || milliseconds <= 0) {
+      return null;
+    }
+
+    const hours = milliseconds / (1000 * 60 * 60);
+    const days = hours / 24;
+
+    if (Number.isInteger(days)) {
+      return `${days} day${days === 1 ? "" : "s"}`;
+    }
+
+    return `${hours.toFixed(1)} hours`;
+  }, [createForm.startsAtUtc, createForm.endsAtUtc]);
 
   const showApiError = (err, fallback = "Something went wrong.") => {
     const msg =
@@ -109,8 +181,28 @@ function AdminDiscounts() {
     return formatCurrency(discount.discountValue);
   };
 
-  const formatDate = (value) => {
-    return value ? new Date(value).toLocaleString() : "-";
+  const formatDate = (value) => (value ? new Date(value).toLocaleString() : "-");
+
+  const formatAppliesTo = (discount) => {
+    if (!discount) return "-";
+
+    const option = APPLIES_TO_TYPES.find(
+      (item) => item.value === discount.appliesToType,
+    );
+
+    return option?.label || discount.appliesToType || "-";
+  };
+
+  const getRuleSummary = (discount) => {
+    if (!discount) return "";
+    if (discount.ruleSummary) return discount.ruleSummary;
+
+    const rules = Array.isArray(discount.rules) ? discount.rules : [];
+
+    return rules
+      .map((rule) => `${rule.ruleType}: ${rule.ruleValue}`)
+      .filter(Boolean)
+      .join(discount.matchAllRules === false ? " OR " : " AND ");
   };
 
   const buildFilters = () => {
@@ -138,15 +230,30 @@ function AdminDiscounts() {
       return null;
     }
 
-    return Number(value);
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   };
 
   const dateOrNull = (value) => {
-    if (!value) {
-      return null;
-    }
-
+    if (!value) return null;
     return new Date(value).toISOString();
+  };
+
+  const loadReferenceData = () => {
+    setReferenceLoading(true);
+
+    Promise.all([
+      catagoryService.getAllCatagories(),
+      conditionService.getAllConditions(),
+    ])
+      .then(([categoryResponse, conditionResponse]) => {
+        setCategories(categoryResponse?.item || []);
+        setConditions(conditionResponse?.item || []);
+      })
+      .catch((err) => {
+        showApiError(err, "Failed to load categories and conditions.");
+      })
+      .finally(() => setReferenceLoading(false));
   };
 
   const loadDiscounts = (pageIndex = pageData.pageIndex) => {
@@ -188,32 +295,39 @@ function AdminDiscounts() {
 
         showApiError(err, "Failed to load discount codes.");
       })
-      .finally(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   };
 
   const loadDiscountById = (id) => {
     setDetailsLoading(true);
 
-    adminDiscountCodeService
+    return adminDiscountCodeService
       .getDiscountCodeById(id)
       .then((response) => {
-        setSelectedDiscount(response?.item || null);
+        const discount = response?.item || null;
+        setSelectedDiscount(discount);
         setDeactivateNotes("");
+        return discount;
       })
       .catch((err) => {
         showApiError(err, "Failed to load discount details.");
+        return null;
       })
-      .finally(() => {
-        setDetailsLoading(false);
-      });
+      .finally(() => setDetailsLoading(false));
   };
 
   useEffect(() => {
     loadDiscounts(0);
+    loadReferenceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const resetCreateForm = () => {
+    setCreateForm(initialCreateForm);
+    setSelectedPart(null);
+    setPartResults([]);
+    setPartSearch({ q: "", partNumber: "" });
+  };
 
   const onCreateFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -224,9 +338,27 @@ function AdminDiscounts() {
         [name]: type === "checkbox" ? checked : value,
       };
 
-      if (name === "appliesToType" && value !== "Part") {
-        setSelectedPart(null);
-        next.partId = "";
+      if (name === "appliesToType") {
+        if (value !== "Part") {
+          setSelectedPart(null);
+          setPartResults([]);
+          next.partId = "";
+        }
+
+        if (value !== "Product" && value !== "Part") {
+          next.shopifyProductId = "";
+        }
+
+        if (value !== "Variant" && value !== "Part") {
+          next.shopifyVariantId = "";
+        }
+
+        if (value !== "CollectionRule") {
+          next.categoryId = "";
+          next.conditionId = "";
+          next.matchAllRules = true;
+          next.autoMaintainEligibility = true;
+        }
       }
 
       return next;
@@ -235,11 +367,7 @@ function AdminDiscounts() {
 
   const onFilterChange = (e) => {
     const { name, value } = e.target;
-
-    setFilters((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
   const onSearch = (e) => {
@@ -294,7 +422,7 @@ function AdminDiscounts() {
       !createForm.shopifyProductId
     ) {
       toastr.warning(
-        "Shopify Product Id is required when Applies To is Product.",
+        "Shopify Product Id is required when Applies To is Shopify product.",
       );
       return false;
     }
@@ -304,24 +432,73 @@ function AdminDiscounts() {
       !createForm.shopifyVariantId
     ) {
       toastr.warning(
-        "Shopify Variant Id is required when Applies To is Variant.",
+        "Shopify Variant Id is required when Applies To is Shopify variant.",
       );
+      return false;
+    }
+
+    if (
+      createForm.appliesToType === "CollectionRule" &&
+      !createForm.categoryId &&
+      !createForm.conditionId
+    ) {
+      toastr.warning("Select at least one category or condition rule.");
       return false;
     }
 
     return true;
   };
 
+  const buildCollectionRules = () => {
+    const rules = [];
+
+    if (selectedCategory) {
+      rules.push({
+        ruleType: "Category",
+        sourceId: Number(selectedCategory.id),
+        ruleValue: selectedCategory.name || selectedCategory.label,
+        sortOrder: rules.length,
+      });
+    }
+
+    if (selectedCondition) {
+      rules.push({
+        ruleType: "Condition",
+        sourceId: Number(selectedCondition.id),
+        ruleValue: selectedCondition.name || selectedCondition.label,
+        sortOrder: rules.length,
+      });
+    }
+
+    return rules;
+  };
+
   const buildCreatePayload = () => {
+    const isCollectionRule = createForm.appliesToType === "CollectionRule";
+
     return {
       code: createForm.code.trim().toUpperCase(),
       title: emptyToNull(createForm.title?.trim()),
       discountType: createForm.discountType,
       discountValue: Number(createForm.discountValue),
       appliesToType: createForm.appliesToType,
-      partId: numberOrNull(createForm.partId),
-      shopifyProductId: numberOrNull(createForm.shopifyProductId),
-      shopifyVariantId: numberOrNull(createForm.shopifyVariantId),
+      partId:
+        createForm.appliesToType === "Part"
+          ? numberOrNull(createForm.partId)
+          : null,
+      shopifyProductId:
+        createForm.appliesToType === "Product" ||
+        createForm.appliesToType === "Part"
+          ? numberOrNull(createForm.shopifyProductId)
+          : null,
+      shopifyVariantId:
+        createForm.appliesToType === "Variant" ||
+        createForm.appliesToType === "Part"
+          ? numberOrNull(createForm.shopifyVariantId)
+          : null,
+      matchAllRules: isCollectionRule ? Boolean(createForm.matchAllRules) : true,
+      autoMaintainEligibility: isCollectionRule,
+      rules: isCollectionRule ? buildCollectionRules() : [],
       customerEmail: emptyToNull(createForm.customerEmail?.trim()),
       startsAtUtc: dateOrNull(createForm.startsAtUtc),
       endsAtUtc: dateOrNull(createForm.endsAtUtc),
@@ -334,9 +511,7 @@ function AdminDiscounts() {
   const onCreateDiscount = (e) => {
     e.preventDefault();
 
-    if (!validateCreateForm()) {
-      return;
-    }
+    if (!validateCreateForm()) return;
 
     setCreating(true);
 
@@ -344,29 +519,34 @@ function AdminDiscounts() {
       .addDiscountCode(buildCreatePayload())
       .then((response) => {
         const id = response?.item;
-
-        toastr.success("Discount code record created.");
-        setCreateForm(initialCreateForm);
+        resetCreateForm();
         loadDiscounts(0);
 
-        if (id) {
-          loadDiscountById(id);
+        if (!id) {
+          toastr.success("Discount code record created.");
+          return null;
         }
+
+        return loadDiscountById(id).then((discount) => {
+          if (discount?.status === "Error") {
+            toastr.warning(
+              "The local discount was saved, but Shopify reported an error. Review the details panel.",
+            );
+          } else if (discount?.appliesToType === "CollectionRule") {
+            toastr.success(
+              "Automated collection discount created and connected to Shopify.",
+            );
+          } else {
+            toastr.success("Discount code created in Shopify.");
+          }
+        });
       })
-      .catch((err) => {
-        showApiError(err, "Failed to create discount code.");
-      })
-      .finally(() => {
-        setCreating(false);
-      });
+      .catch((err) => showApiError(err, "Failed to create discount code."))
+      .finally(() => setCreating(false));
   };
 
   const onSelectDiscount = (discount) => {
-    if (!discount?.id) {
-      return;
-    }
-
-    loadDiscountById(discount.id);
+    if (discount?.id) loadDiscountById(discount.id);
   };
 
   const onDeactivate = () => {
@@ -391,18 +571,36 @@ function AdminDiscounts() {
         loadDiscounts(pageData.pageIndex);
         loadDiscountById(selectedDiscount.id);
       })
-      .catch((err) => {
-        showApiError(err, "Failed to deactivate discount code.");
+      .catch((err) => showApiError(err, "Failed to deactivate discount code."))
+      .finally(() => setDeactivating(false));
+  };
+
+  const onBackfillShopifyTags = () => {
+    setBackfillLoading(true);
+    setBackfillResult(null);
+
+    adminDiscountCodeService
+      .backfillShopifyTags()
+      .then((response) => {
+        const result = response?.item || null;
+        setBackfillResult(result);
+
+        if (result?.productsFailed > 0) {
+          toastr.warning(
+            `Tag backfill completed with ${result.productsFailed} failed product(s).`,
+          );
+        } else {
+          toastr.success(
+            `Shopify tags updated on ${result?.productsUpdated || 0} product(s).`,
+          );
+        }
       })
-      .finally(() => {
-        setDeactivating(false);
-      });
+      .catch((err) => showApiError(err, "Failed to backfill Shopify tags."))
+      .finally(() => setBackfillLoading(false));
   };
 
   const goPrev = () => {
-    if (pageData.pageIndex > 0) {
-      loadDiscounts(pageData.pageIndex - 1);
-    }
+    if (pageData.pageIndex > 0) loadDiscounts(pageData.pageIndex - 1);
   };
 
   const goNext = () => {
@@ -413,80 +611,45 @@ function AdminDiscounts() {
 
   const getPartSearchResults = (response) => {
     const item = response?.item;
-
-    if (Array.isArray(item)) {
-      return item;
-    }
-
-    if (Array.isArray(item?.pagedItems)) {
-      return item.pagedItems;
-    }
-
-    if (Array.isArray(item?.items)) {
-      return item.items;
-    }
-
+    if (Array.isArray(item)) return item;
+    if (Array.isArray(item?.pagedItems)) return item.pagedItems;
+    if (Array.isArray(item?.items)) return item.items;
     return [];
   };
 
-  const getPartAdminNotes = (part) => {
-    return (
-      part?.adminNotes ||
-      part?.AdminNotes ||
-      part?.notes ||
-      part?.adminNote ||
-      ""
-    );
-  };
+  const getPartAdminNotes = (part) =>
+    part?.adminNotes ||
+    part?.AdminNotes ||
+    part?.notes ||
+    part?.adminNote ||
+    "";
 
   const truncateText = (text, maxLength = 220) => {
-    if (!text) {
-      return "";
-    }
-
-    if (text.length <= maxLength) {
-      return text;
-    }
-
+    if (!text || text.length <= maxLength) return text || "";
     return `${text.substring(0, maxLength)}...`;
   };
 
   const getPartImageUrl = (part) => {
-    const image =
-      part?.image || part?.primaryImage || part?.imageUrl || part?.url;
-
-    if (!image) {
-      return null;
-    }
-
-    if (image.startsWith("http://") || image.startsWith("https://")) {
-      return image;
-    }
+    const image = part?.image || part?.primaryImage || part?.imageUrl || part?.url;
+    if (!image) return null;
+    if (image.startsWith("http://") || image.startsWith("https://")) return image;
 
     const cleanImage = image.startsWith("/") ? image : `/${image}`;
-
     return `${API_HOST_PREFIX}${cleanImage}`;
   };
 
   const onPartImageError = (e) => {
     e.currentTarget.style.display = "none";
-
     const fallback = e.currentTarget
       .closest(".discounts-part-image-wrap")
       ?.querySelector(".discounts-part-image-fallback");
 
-    if (fallback) {
-      fallback.style.display = "flex";
-    }
+    if (fallback) fallback.style.display = "flex";
   };
 
   const onPartSearchChange = (e) => {
     const { name, value } = e.target;
-
-    setPartSearch((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setPartSearch((prev) => ({ ...prev, [name]: value }));
   };
 
   const onSearchParts = () => {
@@ -498,17 +661,9 @@ function AdminDiscounts() {
       return;
     }
 
-    const params = {};
-
-    if (q) {
-      params.q = q;
-    }
-
-    if (partNumber) {
-      params.PartNumber = partNumber;
-    }
-
-    params.MaxRows = 25;
+    const params = { MaxRows: 25 };
+    if (q) params.q = q;
+    if (partNumber) params.PartNumber = partNumber;
 
     setPartSearchLoading(true);
 
@@ -517,49 +672,33 @@ function AdminDiscounts() {
       .then((response) => {
         const results = getPartSearchResults(response);
         setPartResults(results);
-
-        if (results.length === 0) {
-          toastr.info("No parts found.");
-        }
+        if (results.length === 0) toastr.info("No parts found.");
       })
-      .catch((err) => {
-        showApiError(err, "Failed to search parts.");
-      })
-      .finally(() => {
-        setPartSearchLoading(false);
-      });
+      .catch((err) => showApiError(err, "Failed to search parts."))
+      .finally(() => setPartSearchLoading(false));
   };
 
   const onUsePart = (part) => {
     const partAdminNotes = getPartAdminNotes(part);
-
     setSelectedPart(part);
 
-    setCreateForm((prev) => {
-      const existingDiscountNotes = prev.adminNotes?.trim();
-
-      let nextAdminNotes = prev.adminNotes;
-
-      if (!existingDiscountNotes && partAdminNotes) {
-        nextAdminNotes = `Part Admin Notes:\n${partAdminNotes}`;
-      }
-
-      return {
-        ...prev,
-        appliesToType: "Part",
-        partId: part.id || "",
-        shopifyProductId: part.shopifyProductId || "",
-        shopifyVariantId: part.shopifyVariantId || "",
-        adminNotes: nextAdminNotes,
-      };
-    });
+    setCreateForm((prev) => ({
+      ...prev,
+      appliesToType: "Part",
+      partId: part.id || "",
+      shopifyProductId: part.shopifyProductId || "",
+      shopifyVariantId: part.shopifyVariantId || "",
+      adminNotes:
+        !prev.adminNotes?.trim() && partAdminNotes
+          ? `Part Admin Notes:\n${partAdminNotes}`
+          : prev.adminNotes,
+    }));
 
     toastr.success(`Selected part #${part.id}`);
   };
 
   const onClearSelectedPart = () => {
     setSelectedPart(null);
-
     setCreateForm((prev) => ({
       ...prev,
       partId: "",
@@ -570,10 +709,7 @@ function AdminDiscounts() {
 
   const formatPartPrice = (value) => {
     const numberValue = Number(value);
-
-    if (Number.isNaN(numberValue)) {
-      return "-";
-    }
+    if (Number.isNaN(numberValue)) return "-";
 
     return numberValue.toLocaleString(undefined, {
       style: "currency",
@@ -581,16 +717,101 @@ function AdminDiscounts() {
     });
   };
 
+  const renderPartCard = (part, selected = false) => (
+    <div className={selected ? "selected-part-card" : "discounts-part-result"}>
+      <div className="discounts-part-image-wrap">
+        {getPartImageUrl(part) ? (
+          <img
+            src={getPartImageUrl(part)}
+            alt={part.name || "Part"}
+            className="discounts-part-image"
+            onError={onPartImageError}
+          />
+        ) : null}
+        <div
+          className="discounts-part-image-fallback"
+          style={{ display: getPartImageUrl(part) ? "none" : "flex" }}
+        >
+          No Photo
+        </div>
+      </div>
+
+      <div className="discounts-part-info">
+        <strong>
+          #{part.id} {part.name}
+        </strong>
+        <p>Part Number: {part.partNumber || part.partnumber || "-"}</p>
+        <p>
+          Price: {formatPartPrice(part.price)} | Status: {part.availableStatus || "-"}
+        </p>
+
+        {getPartAdminNotes(part) ? (
+          <div className="discounts-part-admin-notes">
+            <strong>Part Admin Notes</strong>
+            <p>
+              {selected
+                ? getPartAdminNotes(part)
+                : truncateText(getPartAdminNotes(part), 180)}
+            </p>
+          </div>
+        ) : (
+          <div className="discounts-part-admin-notes empty">
+            <strong>Part Admin Notes</strong>
+            <p>No admin notes on this part.</p>
+          </div>
+        )}
+      </div>
+
+      {selected ? (
+        <span className="discount-status active">Selected</span>
+      ) : (
+        <button
+          className="discounts-btn small primary"
+          type="button"
+          onClick={() => onUsePart(part)}
+        >
+          Use Part
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="discounts-page">
       <div className="discounts-header">
         <div>
           <h2>Admin Discounts</h2>
           <p>
-            Create and manage Shopify discount code records from the Site admin
-            workflow.
+            Create Shopify discount codes, including automatically maintained
+            category and condition sales.
           </p>
         </div>
+
+        <button
+          className="discounts-btn secondary"
+          type="button"
+          onClick={onBackfillShopifyTags}
+          disabled={backfillLoading}
+        >
+          {backfillLoading ? "Updating Shopify Tags..." : "Backfill Shopify Tags"}
+        </button>
+      </div>
+
+      <div className="discounts-tag-help">
+        <strong>Automated collection setup</strong>
+        <p>
+          Run the tag backfill once after deploying this feature. Future part
+          publishes and Shopify syncs will keep managed category and condition
+          tags current automatically.
+        </p>
+        {backfillResult ? (
+          <div className="discounts-backfill-result">
+            <span>Examined: {backfillResult.partsExamined || 0}</span>
+            <span>Updated: {backfillResult.productsUpdated || 0}</span>
+            <span>Skipped: {backfillResult.productsSkipped || 0}</span>
+            <span>Failed: {backfillResult.productsFailed || 0}</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="discounts-create-card">
@@ -604,7 +825,7 @@ function AdminDiscounts() {
               name="code"
               value={createForm.code}
               onChange={onCreateFormChange}
-              placeholder="TEST15"
+              placeholder="USEDENGINE10"
             />
           </div>
 
@@ -615,7 +836,7 @@ function AdminDiscounts() {
               name="title"
               value={createForm.title}
               onChange={onCreateFormChange}
-              placeholder="Test 15 Percent Discount"
+              placeholder="10% Off Used Engine Parts"
             />
           </div>
 
@@ -627,8 +848,8 @@ function AdminDiscounts() {
               onChange={onCreateFormChange}
             >
               {DISCOUNT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
+                <option key={type.value} value={type.value}>
+                  {type.label}
                 </option>
               ))}
             </select>
@@ -648,7 +869,7 @@ function AdminDiscounts() {
               value={createForm.discountValue}
               onChange={onCreateFormChange}
               placeholder={
-                createForm.discountType === "Percentage" ? "15" : "25.00"
+                createForm.discountType === "Percentage" ? "10" : "25.00"
               }
             />
           </div>
@@ -661,46 +882,161 @@ function AdminDiscounts() {
               onChange={onCreateFormChange}
             >
               {APPLIES_TO_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
+                <option key={type.value} value={type.value}>
+                  {type.label}
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="discounts-field">
-            <label>Selected Part Id</label>
-            <input
-              type="number"
-              name="partId"
-              value={createForm.partId}
-              onChange={onCreateFormChange}
-              placeholder="Search below"
-              readOnly={Boolean(selectedPart)}
-            />
-          </div>
+          {createForm.appliesToType === "Product" ? (
+            <div className="discounts-field">
+              <label>Shopify Product Id</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="shopifyProductId"
+                value={createForm.shopifyProductId}
+                onChange={onCreateFormChange}
+                placeholder="Required"
+              />
+            </div>
+          ) : null}
 
-          <div className="discounts-field">
-            <label>Shopify Product Id</label>
-            <input
-              type="number"
-              name="shopifyProductId"
-              value={createForm.shopifyProductId}
-              onChange={onCreateFormChange}
-              placeholder="Optional"
-            />
-          </div>
+          {createForm.appliesToType === "Variant" ? (
+            <div className="discounts-field">
+              <label>Shopify Variant Id</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="shopifyVariantId"
+                value={createForm.shopifyVariantId}
+                onChange={onCreateFormChange}
+                placeholder="Required"
+              />
+            </div>
+          ) : null}
 
-          <div className="discounts-field">
-            <label>Shopify Variant Id</label>
-            <input
-              type="number"
-              name="shopifyVariantId"
-              value={createForm.shopifyVariantId}
-              onChange={onCreateFormChange}
-              placeholder="Optional"
-            />
-          </div>
+          {createForm.appliesToType === "Part" ? (
+            <>
+              <div className="discounts-field">
+                <label>Selected Part Id</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="partId"
+                  value={createForm.partId}
+                  onChange={onCreateFormChange}
+                  placeholder="Search below"
+                  readOnly={Boolean(selectedPart)}
+                />
+              </div>
+
+              <div className="discounts-field">
+                <label>Shopify Product Id</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="shopifyProductId"
+                  value={createForm.shopifyProductId}
+                  onChange={onCreateFormChange}
+                  placeholder="Filled from selected part"
+                />
+              </div>
+
+              <div className="discounts-field">
+                <label>Shopify Variant Id</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="shopifyVariantId"
+                  value={createForm.shopifyVariantId}
+                  onChange={onCreateFormChange}
+                  placeholder="Filled from selected part"
+                />
+              </div>
+            </>
+          ) : null}
+
+          {createForm.appliesToType === "CollectionRule" ? (
+            <div className="discounts-rule-builder full-width">
+              <div className="discounts-rule-builder-header">
+                <div>
+                  <h4>Automated Collection Rules</h4>
+                  <p>
+                    Shopify will automatically add or remove products as their
+                    Site category or condition tags change.
+                  </p>
+                </div>
+                <span className="discount-status active">Automatic</span>
+              </div>
+
+              <div className="discounts-rule-fields">
+                <div className="discounts-field">
+                  <label>Category</label>
+                  <select
+                    name="categoryId"
+                    value={createForm.categoryId}
+                    onChange={onCreateFormChange}
+                    disabled={referenceLoading}
+                  >
+                    <option value="">Any category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="discounts-field">
+                  <label>Condition</label>
+                  <select
+                    name="conditionId"
+                    value={createForm.conditionId}
+                    onChange={onCreateFormChange}
+                    disabled={referenceLoading}
+                  >
+                    <option value="">Any condition</option>
+                    {conditions.map((condition) => (
+                      <option key={condition.id} value={condition.id}>
+                        {condition.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="discounts-field checkbox-field rule-checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="matchAllRules"
+                      checked={createForm.matchAllRules}
+                      onChange={onCreateFormChange}
+                      disabled={collectionRulePreview.length < 2}
+                    />
+                    Require every selected rule (AND)
+                  </label>
+                </div>
+              </div>
+
+              <div className="discounts-rule-summary">
+                <strong>Rule preview</strong>
+                {collectionRulePreview.length > 0 ? (
+                  <p>
+                    {collectionRulePreview.join(
+                      createForm.matchAllRules ? " AND " : " OR ",
+                    )}
+                  </p>
+                ) : (
+                  <p>Select a category, a condition, or both.</p>
+                )}
+                <small>
+                  Automatic maintenance is always enabled for collection rules.
+                </small>
+              </div>
+            </div>
+          ) : null}
 
           <div className="discounts-field">
             <label>Customer Email</label>
@@ -731,6 +1067,9 @@ function AdminDiscounts() {
               value={createForm.endsAtUtc}
               onChange={onCreateFormChange}
             />
+            {saleDuration ? (
+              <small className="discounts-field-help">Duration: {saleDuration}</small>
+            ) : null}
           </div>
 
           <div className="discounts-field">
@@ -767,186 +1106,98 @@ function AdminDiscounts() {
             />
           </div>
 
-          <div className="discounts-part-search full-width">
-            <div className="discounts-part-search-header">
-              <div>
-                <h4>Find Part</h4>
-                <p>
-                  Search and attach a part to this discount without leaving the
-                  page. Results include the part photo and admin notes for
-                  confirmation.
-                </p>
+          {createForm.appliesToType === "CollectionRule" &&
+          collectionRulePreview.length > 0 ? (
+            <div className="discounts-create-summary full-width">
+              <strong>{formatDiscountValue(createForm)} off</strong>
+              <span>
+                {collectionRulePreview.join(
+                  createForm.matchAllRules ? " + " : " or ",
+                )}
+              </span>
+              <span>
+                {saleDuration ? `Duration: ${saleDuration}` : "No duration calculated"}
+              </span>
+              <span>Shopify collection membership: automatic</span>
+            </div>
+          ) : null}
+
+          {createForm.appliesToType === "Part" ? (
+            <div className="discounts-part-search full-width">
+              <div className="discounts-part-search-header">
+                <div>
+                  <h4>Find Part</h4>
+                  <p>
+                    Search and attach a Site part. Results include its photo and
+                    admin notes for confirmation.
+                  </p>
+                </div>
+
+                {selectedPart ? (
+                  <button
+                    className="discounts-btn secondary"
+                    type="button"
+                    onClick={onClearSelectedPart}
+                  >
+                    Clear Selected Part
+                  </button>
+                ) : null}
               </div>
 
-              {selectedPart ? (
-                <button
-                  className="discounts-btn secondary"
-                  type="button"
-                  onClick={onClearSelectedPart}
-                >
-                  Clear Selected Part
-                </button>
+              {selectedPart ? renderPartCard(selectedPart, true) : null}
+
+              <div className="discounts-part-search-form">
+                <div className="discounts-field">
+                  <label>Part Name / Keyword</label>
+                  <input
+                    type="text"
+                    name="q"
+                    value={partSearch.q}
+                    onChange={onPartSearchChange}
+                    placeholder="Example: bumper, headlight, console"
+                  />
+                </div>
+
+                <div className="discounts-field">
+                  <label>Part Number</label>
+                  <input
+                    type="text"
+                    name="partNumber"
+                    value={partSearch.partNumber}
+                    onChange={onPartSearchChange}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div className="discounts-part-search-actions">
+                  <button
+                    className="discounts-btn secondary"
+                    type="button"
+                    onClick={onSearchParts}
+                    disabled={partSearchLoading}
+                  >
+                    {partSearchLoading ? "Searching..." : "Search Parts"}
+                  </button>
+                </div>
+              </div>
+
+              {partResults.length > 0 ? (
+                <div className="discounts-part-results">
+                  {partResults.map((part) => (
+                    <React.Fragment key={part.id}>
+                      {renderPartCard(part)}
+                    </React.Fragment>
+                  ))}
+                </div>
               ) : null}
             </div>
-
-            {selectedPart ? (
-              <div className="selected-part-card">
-                <div className="discounts-part-image-wrap">
-                  {getPartImageUrl(selectedPart) ? (
-                    <img
-                      src={getPartImageUrl(selectedPart)}
-                      alt={selectedPart.name || "Selected part"}
-                      className="discounts-part-image"
-                      onError={onPartImageError}
-                    />
-                  ) : null}
-
-                  <div
-                    className="discounts-part-image-fallback"
-                    style={{
-                      display: getPartImageUrl(selectedPart) ? "none" : "flex",
-                    }}
-                  >
-                    No Photo
-                  </div>
-                </div>
-
-                <div className="discounts-part-info">
-                  <strong>
-                    #{selectedPart.id} {selectedPart.name}
-                  </strong>
-
-                  <p>
-                    Part Number:{" "}
-                    {selectedPart.partNumber || selectedPart.partnumber || "-"}
-                  </p>
-
-                  <p>
-                    Price: {formatPartPrice(selectedPart.price)} | Status:{" "}
-                    {selectedPart.availableStatus || "-"}
-                  </p>
-
-                  {getPartAdminNotes(selectedPart) ? (
-                    <div className="discounts-part-admin-notes">
-                      <strong>Part Admin Notes</strong>
-                      <p>{getPartAdminNotes(selectedPart)}</p>
-                    </div>
-                  ) : (
-                    <div className="discounts-part-admin-notes empty">
-                      <strong>Part Admin Notes</strong>
-                      <p>No admin notes on this part.</p>
-                    </div>
-                  )}
-                </div>
-
-                <span className="discount-status active">Selected</span>
-              </div>
-            ) : null}
-
-            <div className="discounts-part-search-form">
-              <div className="discounts-field">
-                <label>Part Name / Keyword</label>
-                <input
-                  type="text"
-                  name="q"
-                  value={partSearch.q}
-                  onChange={onPartSearchChange}
-                  placeholder="Example: bumper, headlight, console"
-                />
-              </div>
-
-              <div className="discounts-field">
-                <label>Part Number</label>
-                <input
-                  type="text"
-                  name="partNumber"
-                  value={partSearch.partNumber}
-                  onChange={onPartSearchChange}
-                  placeholder="Optional"
-                />
-              </div>
-
-              <div className="discounts-part-search-actions">
-                <button
-                  className="discounts-btn secondary"
-                  type="button"
-                  onClick={onSearchParts}
-                  disabled={partSearchLoading}
-                >
-                  {partSearchLoading ? "Searching..." : "Search Parts"}
-                </button>
-              </div>
-            </div>
-
-            {partResults.length > 0 ? (
-              <div className="discounts-part-results">
-                {partResults.map((part) => (
-                  <div className="discounts-part-result" key={part.id}>
-                    <div className="discounts-part-image-wrap">
-                      {getPartImageUrl(part) ? (
-                        <img
-                          src={getPartImageUrl(part)}
-                          alt={part.name || "Part"}
-                          className="discounts-part-image"
-                          onError={onPartImageError}
-                        />
-                      ) : null}
-
-                      <div
-                        className="discounts-part-image-fallback"
-                        style={{
-                          display: getPartImageUrl(part) ? "none" : "flex",
-                        }}
-                      >
-                        No Photo
-                      </div>
-                    </div>
-
-                    <div className="discounts-part-info">
-                      <strong>
-                        #{part.id} {part.name}
-                      </strong>
-
-                      <p>
-                        Part Number: {part.partNumber || part.partnumber || "-"}
-                      </p>
-
-                      <p>
-                        Price: {formatPartPrice(part.price)} | Status:{" "}
-                        {part.availableStatus || "-"}
-                      </p>
-
-                      {getPartAdminNotes(part) ? (
-                        <div className="discounts-part-admin-notes">
-                          <strong>Part Admin Notes</strong>
-                          <p>{truncateText(getPartAdminNotes(part), 180)}</p>
-                        </div>
-                      ) : (
-                        <div className="discounts-part-admin-notes empty">
-                          <strong>Part Admin Notes</strong>
-                          <p>No admin notes on this part.</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      className="discounts-btn small primary"
-                      type="button"
-                      onClick={() => onUsePart(part)}
-                    >
-                      Use Part
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          ) : null}
 
           <div className="discounts-actions full-width">
             <button
               className="discounts-btn primary"
               type="submit"
-              disabled={creating}
+              disabled={creating || referenceLoading}
             >
               {creating ? "Creating..." : "Create Discount"}
             </button>
@@ -954,12 +1205,7 @@ function AdminDiscounts() {
             <button
               className="discounts-btn secondary"
               type="button"
-              onClick={() => {
-                setCreateForm(initialCreateForm);
-                setSelectedPart(null);
-                setPartResults([]);
-                setPartSearch({ q: "", partNumber: "" });
-              }}
+              onClick={resetCreateForm}
               disabled={creating}
             >
               Clear
@@ -971,11 +1217,7 @@ function AdminDiscounts() {
       <form className="discounts-filters" onSubmit={onSearch}>
         <div className="discounts-field">
           <label>Status</label>
-          <select
-            name="status"
-            value={filters.status}
-            onChange={onFilterChange}
-          >
+          <select name="status" value={filters.status} onChange={onFilterChange}>
             <option value="">All</option>
             {STATUS_OPTIONS.map((status) => (
               <option key={status} value={status}>
@@ -1008,11 +1250,7 @@ function AdminDiscounts() {
         </div>
 
         <div className="discounts-filter-actions">
-          <button
-            className="discounts-btn primary"
-            type="submit"
-            disabled={loading}
-          >
+          <button className="discounts-btn primary" type="submit" disabled={loading}>
             Search
           </button>
           <button
@@ -1038,65 +1276,70 @@ function AdminDiscounts() {
           ) : discounts.length === 0 ? (
             <div className="discounts-empty">No discount codes found.</div>
           ) : (
-            <table className="discounts-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th>Applies To</th>
-                  <th>Status</th>
-                  <th>Used</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {discounts.map((discount) => (
-                  <tr
-                    key={discount.id}
-                    className={
-                      selectedDiscount?.id === discount.id ? "selected-row" : ""
-                    }
-                  >
-                    <td>
-                      <strong>{discount.code}</strong>
-                      <div className="discounts-muted">{discount.title}</div>
-                    </td>
-                    <td>{discount.discountType}</td>
-                    <td>{formatDiscountValue(discount)}</td>
-                    <td>
-                      {discount.appliesToType}
-                      {discount.partId ? (
-                        <div className="discounts-muted">
-                          Part #{discount.partId}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td>
-                      <span
-                        className={`discount-status ${String(
-                          discount.status || "",
-                        ).toLowerCase()}`}
-                      >
-                        {discount.status || "-"}
-                      </span>
-                    </td>
-                    <td>
-                      {discount.usageCount}/{discount.usageLimit}
-                    </td>
-                    <td>
-                      <button
-                        className="discounts-btn small"
-                        type="button"
-                        onClick={() => onSelectDiscount(discount)}
-                      >
-                        View
-                      </button>
-                    </td>
+            <div className="discounts-table-scroll">
+              <table className="discounts-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>Applies To</th>
+                    <th>Status</th>
+                    <th>Used</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {discounts.map((discount) => (
+                    <tr
+                      key={discount.id}
+                      className={
+                        selectedDiscount?.id === discount.id ? "selected-row" : ""
+                      }
+                    >
+                      <td>
+                        <strong>{discount.code}</strong>
+                        <div className="discounts-muted">{discount.title}</div>
+                      </td>
+                      <td>{discount.discountType}</td>
+                      <td>{formatDiscountValue(discount)}</td>
+                      <td>
+                        {formatAppliesTo(discount)}
+                        {discount.partId ? (
+                          <div className="discounts-muted">Part #{discount.partId}</div>
+                        ) : null}
+                        {discount.appliesToType === "CollectionRule" ? (
+                          <div className="discounts-muted discounts-rule-table-summary">
+                            {getRuleSummary(discount) || `${discount.ruleCount || 0} rule(s)`}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td>
+                        <span
+                          className={`discount-status ${String(
+                            discount.status || "",
+                          ).toLowerCase()}`}
+                        >
+                          {discount.status || "-"}
+                        </span>
+                      </td>
+                      <td>
+                        {discount.usageCount}/{discount.usageLimit}
+                      </td>
+                      <td>
+                        <button
+                          className="discounts-btn small"
+                          type="button"
+                          onClick={() => onSelectDiscount(discount)}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <div className="discounts-pagination">
@@ -1171,8 +1414,88 @@ function AdminDiscounts() {
 
                 <div>
                   <strong>Applies To</strong>
-                  <p>{selectedDiscount.appliesToType || "-"}</p>
+                  <p>{formatAppliesTo(selectedDiscount)}</p>
                 </div>
+
+                <div>
+                  <strong>Usage</strong>
+                  <p>
+                    {selectedDiscount.usageCount}/{selectedDiscount.usageLimit}
+                  </p>
+                </div>
+
+                {selectedDiscount.appliesToType === "CollectionRule" ? (
+                  <>
+                    <div>
+                      <strong>Rule Matching</strong>
+                      <p>{selectedDiscount.matchAllRules ? "Match all (AND)" : "Match any (OR)"}</p>
+                    </div>
+
+                    <div>
+                      <strong>Automatic Maintenance</strong>
+                      <p>{selectedDiscount.autoMaintainEligibility ? "Enabled" : "Not marked"}</p>
+                    </div>
+
+                    <div className="full-width">
+                      <strong>Collection Rules</strong>
+                      {Array.isArray(selectedDiscount.rules) &&
+                      selectedDiscount.rules.length > 0 ? (
+                        <div className="discounts-detail-rules">
+                          {selectedDiscount.rules.map((rule) => (
+                            <div className="discounts-detail-rule" key={rule.id}>
+                              <span>{rule.ruleType}</span>
+                              <strong>{rule.ruleValue}</strong>
+                              <code>{rule.shopifyTag}</code>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>{getRuleSummary(selectedDiscount) || "-"}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <strong>Collection Sync</strong>
+                      <p>
+                        <span
+                          className={`discount-sync-status ${String(
+                            selectedDiscount.lastCollectionSyncStatus || "unknown",
+                          ).toLowerCase()}`}
+                        >
+                          {selectedDiscount.lastCollectionSyncStatus || "Unknown"}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div>
+                      <strong>Last Collection Sync</strong>
+                      <p>{formatDate(selectedDiscount.lastCollectionSyncUtc)}</p>
+                    </div>
+
+                    <div className="full-width">
+                      <strong>Shopify Collection GID</strong>
+                      <p className="break-text">
+                        {selectedDiscount.shopifyCollectionGid || "-"}
+                      </p>
+                    </div>
+
+                    <div className="full-width">
+                      <strong>Shopify Collection Handle</strong>
+                      <p className="break-text">
+                        {selectedDiscount.shopifyCollectionHandle || "-"}
+                      </p>
+                    </div>
+
+                    {selectedDiscount.lastCollectionSyncError ? (
+                      <div className="full-width discounts-sync-error">
+                        <strong>Collection Sync Error</strong>
+                        <p className="break-text">
+                          {selectedDiscount.lastCollectionSyncError}
+                        </p>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
 
                 <div>
                   <strong>Part</strong>
@@ -1184,6 +1507,11 @@ function AdminDiscounts() {
                 </div>
 
                 <div>
+                  <strong>Customer Email</strong>
+                  <p>{selectedDiscount.customerEmail || "-"}</p>
+                </div>
+
+                <div>
                   <strong>Shopify Product Id</strong>
                   <p>{selectedDiscount.shopifyProductId || "-"}</p>
                 </div>
@@ -1191,18 +1519,6 @@ function AdminDiscounts() {
                 <div>
                   <strong>Shopify Variant Id</strong>
                   <p>{selectedDiscount.shopifyVariantId || "-"}</p>
-                </div>
-
-                <div>
-                  <strong>Customer Email</strong>
-                  <p>{selectedDiscount.customerEmail || "-"}</p>
-                </div>
-
-                <div>
-                  <strong>Usage</strong>
-                  <p>
-                    {selectedDiscount.usageCount}/{selectedDiscount.usageLimit}
-                  </p>
                 </div>
 
                 <div>
@@ -1234,9 +1550,7 @@ function AdminDiscounts() {
 
                 <div className="full-width">
                   <strong>Admin Notes</strong>
-                  <p className="break-text">
-                    {selectedDiscount.adminNotes || "-"}
-                  </p>
+                  <p className="break-text">{selectedDiscount.adminNotes || "-"}</p>
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import {
 } from "./serviceHelpers";
 
 const endpoint = `${API_HOST_PREFIX}/api/admin/discounts`;
+const shopifyTagBackfillEndpoint = `${API_HOST_PREFIX}/api/home/shopify/tags/backfill`;
 
 const scrubParams = (params) => {
   const clean = { ...params };
@@ -85,12 +86,25 @@ const deactivateDiscountCode = (id, payload) => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+const backfillShopifyTags = () => {
+  const config = {
+    method: "POST",
+    url: shopifyTagBackfillEndpoint,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
 const adminDiscountCodeService = {
   addDiscountCode,
   getDiscountCodeById,
   getDiscountCodesPaginated,
   markShopifyCreated,
   deactivateDiscountCode,
+  backfillShopifyTags,
 };
 
 export default adminDiscountCodeService;

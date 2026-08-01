@@ -465,3 +465,210 @@
     flex-basis: auto;
   }
 }
+
+/* =========================================================
+   Automated Shopify collection rules
+   ========================================================= */
+
+.discounts-tag-help {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #344b78;
+  border-radius: 12px;
+  background: #111a2a;
+}
+
+.discounts-tag-help strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.discounts-tag-help p {
+  margin: 0;
+  color: #c6d2e8;
+  line-height: 1.45;
+}
+
+.discounts-backfill-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.discounts-backfill-result span {
+  padding: 6px 9px;
+  border: 1px solid #37517d;
+  border-radius: 999px;
+  background: #17243a;
+  color: #e2eaff;
+  font-size: 0.9rem;
+}
+
+.discounts-rule-builder {
+  padding: 16px;
+  border: 1px solid #365b88;
+  border-radius: 12px;
+  background: #101826;
+}
+
+.discounts-rule-builder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.discounts-rule-builder-header h4 {
+  margin: 0 0 5px;
+}
+
+.discounts-rule-builder-header p {
+  margin: 0;
+  color: #b9c6db;
+}
+
+.discounts-rule-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 16px;
+  align-items: end;
+}
+
+.rule-checkbox {
+  min-height: 42px;
+}
+
+.discounts-rule-summary {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #2c4263;
+  border-radius: 10px;
+  background: #0d1420;
+}
+
+.discounts-rule-summary strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.discounts-rule-summary p {
+  margin: 0 0 4px;
+  color: #e3e9f5;
+}
+
+.discounts-rule-summary small,
+.discounts-field-help {
+  color: #9eabc0;
+}
+
+.discounts-create-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #2e6c47;
+  border-radius: 12px;
+  background: #101d15;
+}
+
+.discounts-create-summary strong,
+.discounts-create-summary span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #162b1e;
+}
+
+.discounts-create-summary strong {
+  color: #d7f3df;
+}
+
+.discounts-create-summary span {
+  color: #c5dbc9;
+}
+
+.discounts-table-scroll {
+  overflow-x: auto;
+}
+
+.discounts-rule-table-summary {
+  max-width: 260px;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.discounts-detail-rules {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.discounts-detail-rule {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) 1fr;
+  gap: 4px 12px;
+  padding: 10px;
+  border: 1px solid #303d50;
+  border-radius: 10px;
+  background: #101722;
+}
+
+.discounts-detail-rule span {
+  color: #9fb0ca;
+}
+
+.discounts-detail-rule code {
+  grid-column: 1 / -1;
+  color: #c8d5ea;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.discount-sync-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #3a3a3a;
+  font-size: 0.9rem;
+}
+
+.discount-sync-status.success,
+.discount-sync-status.active {
+  background: #1f6f3d;
+}
+
+.discount-sync-status.pending {
+  background: #6b5d22;
+}
+
+.discount-sync-status.error {
+  background: #8b1e1e;
+}
+
+.discounts-sync-error {
+  padding: 12px;
+  border: 1px solid #7a2c2c;
+  border-radius: 10px;
+  background: #251111;
+}
+
+@media (max-width: 900px) {
+  .discounts-header,
+  .discounts-rule-builder-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .discounts-rule-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .discounts-detail-rule {
+    grid-template-columns: 1fr;
+  }
+
+  .discounts-detail-rule code {
+    grid-column: auto;
+  }
+}
