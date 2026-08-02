@@ -8,6 +8,7 @@ import Contact from "./components/Contact";
 import AdminActions from "./components/AdminActions";
 import AddItem from "./components/AddItem";
 import Login from "./components/Login";
+import ChangePassword from "./components/ChangePassword";
 import SearchItem from "./components/SearchItem";
 import AdminOrders from "./components/AdminOrders";
 import AdminPartDetails from "./components/AdminPartDetails";
@@ -51,6 +52,7 @@ function App() {
 
           {/* Only routes that shouldn't show header (e.g., Login) go outside */}
           <Route path="/login" element={<Login />} />
+          <Route path="/change-password" element={<ChangePassword />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>

@@ -154,3 +154,19 @@
     padding: 24px 20px;
   }
 }
+
+.login-form__help {
+  color: var(--site-text-muted, #b7c0cc);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.login-form__success {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--site-success, #72d899) 45%, transparent);
+  border-radius: var(--site-radius-md, 10px);
+  background: rgba(36, 95, 58, 0.35);
+  color: var(--site-success, #9ee7b8);
+  line-height: 1.4;
+}

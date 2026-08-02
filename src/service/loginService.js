@@ -30,6 +30,18 @@ const getCurrentUser = () => {
   return axios(config).then(onGlobalSuccess).catch(onGlobalError);
 };
 
+const changePassword = (payload) => {
+  const config = {
+    method: "POST",
+    url: `${loginEndpoint}/change-password`,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+  };
+
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
 const userLogout = () => {
   const config = {
     method: "GET",
@@ -45,6 +57,7 @@ const loginService = {
   userLogin,
   getCurrentUser,
   userLogout,
+  changePassword,
 };
 
 export default loginService;

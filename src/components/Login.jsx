@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import loginService from "../service/loginService";
 import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
-    email: "",
+    login: "",
     password: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,10 +34,10 @@ function Login() {
       return;
     }
 
-    const email = formData.email.trim();
+    const login = formData.login.trim();
 
-    if (!email || !formData.password) {
-      setErrorMessage("Enter both your email and password.");
+    if (!login || !formData.password) {
+      setErrorMessage("Enter both your username and password.");
       return;
     }
 
@@ -45,7 +46,7 @@ function Login() {
 
     try {
       const response = await loginService.userLogin({
-        email,
+        login,
         password: formData.password,
       });
 
@@ -56,10 +57,12 @@ function Login() {
       }
 
       localStorage.setItem("userId", String(user.id));
-      localStorage.setItem("userName", user.name || user.email || "Admin");
+      localStorage.setItem("userName", user.name || user.username || "Admin");
+      localStorage.setItem("userUsername", user.username || "");
       localStorage.setItem("userEmail", user.email || "");
       localStorage.setItem("userRole", user.roleName || "");
       localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("mustChangePassword", String(Boolean(user.mustChangePassword)));
 
       window.dispatchEvent(
         new CustomEvent("site-auth-changed", {
@@ -67,12 +70,12 @@ function Login() {
         }),
       );
 
-      navigate("/admin", { replace: true });
+      navigate(user.mustChangePassword ? "/change-password" : "/admin", { replace: true });
     } catch (error) {
       const apiMessage = error?.response?.data?.errors?.[0];
 
       if (error?.response?.status === 401) {
-        setErrorMessage("The email or password is incorrect.");
+        setErrorMessage("The username or password is incorrect.");
       } else {
         setErrorMessage(
           apiMessage ||
@@ -92,20 +95,24 @@ function Login() {
           <p className="login-card__eyebrow">Site_2024 Administration</p>
           <h1 id="login-title">Admin Login</h1>
           <p>Sign in to manage inventory, orders, returns, and site settings.</p>
+          {searchParams.get("passwordChanged") === "1" && (
+            <div className="login-form__success" role="status">
+              Password changed successfully. Sign in with your new password.
+            </div>
+          )}
         </div>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           <div className="login-form__field">
-            <label htmlFor="login-email">Email</label>
+            <label htmlFor="login-username">Username</label>
             <input
-              id="login-email"
-              name="email"
-              type="email"
-              inputMode="email"
+              id="login-username"
+              name="login"
+              type="text"
               autoComplete="username"
-              value={formData.email}
+              value={formData.login}
               onChange={handleChange}
-              placeholder="you@example.com"
+              placeholder="PhilipRisteski"
               required
               disabled={isSubmitting}
               autoFocus
