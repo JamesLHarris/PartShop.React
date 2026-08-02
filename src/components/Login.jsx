@@ -62,7 +62,10 @@ function Login() {
       localStorage.setItem("userEmail", user.email || "");
       localStorage.setItem("userRole", user.roleName || "");
       localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("mustChangePassword", String(Boolean(user.mustChangePassword)));
+      localStorage.setItem(
+        "mustChangePassword",
+        String(Boolean(user.mustChangePassword)),
+      );
 
       window.dispatchEvent(
         new CustomEvent("site-auth-changed", {
@@ -70,7 +73,9 @@ function Login() {
         }),
       );
 
-      navigate(user.mustChangePassword ? "/change-password" : "/admin", { replace: true });
+      navigate(user.mustChangePassword ? "/change-password" : "/admin", {
+        replace: true,
+      });
     } catch (error) {
       const apiMessage = error?.response?.data?.errors?.[0];
 
@@ -92,9 +97,11 @@ function Login() {
     <main className="login-page">
       <section className="login-card" aria-labelledby="login-title">
         <div className="login-card__heading">
-          <p className="login-card__eyebrow">Site_2024 Administration</p>
-          <h1 id="login-title">Admin Login</h1>
-          <p>Sign in to manage inventory, orders, returns, and site settings.</p>
+          <p className="login-card__eyebrow">Administration</p>
+          <h1 id="login-title">Login</h1>
+          <p>
+            Sign in to manage inventory, orders, returns, and site settings.
+          </p>
           {searchParams.get("passwordChanged") === "1" && (
             <div className="login-form__success" role="status">
               Password changed successfully. Sign in with your new password.
@@ -112,7 +119,7 @@ function Login() {
               autoComplete="username"
               value={formData.login}
               onChange={handleChange}
-              placeholder="PhilipRisteski"
+              placeholder="User Name"
               required
               disabled={isSubmitting}
               autoFocus
