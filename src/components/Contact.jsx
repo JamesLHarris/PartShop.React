@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import toastr from "toastr";
 import contactService from "../service/contactService";
@@ -23,6 +23,21 @@ const inquiryOptions = [
   { value: "website", label: "Website Issue" },
 ];
 
+const createSubmissionId = () => {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+    /[xy]/g,
+    (character) => {
+      const random = Math.floor(Math.random() * 16);
+      const value = character === "x" ? random : (random & 0x3) | 0x8;
+      return value.toString(16);
+    },
+  );
+};
+
 function Contact() {
   const [searchParams] = useSearchParams();
   const partIdParam = searchParams.get("partId");
@@ -37,6 +52,7 @@ function Contact() {
     message: searchParams.get("message") || "",
   }));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionIdRef = useRef(createSubmissionId());
 
   const onFormFieldChange = (event) => {
     const { name, value } = event.target;
@@ -78,6 +94,7 @@ function Contact() {
 
   const buildPayload = () => {
     return {
+      clientSubmissionId: submissionIdRef.current,
       inquiryType: formData.inquiryType,
       name: formData.name.trim(),
       email: formData.email.trim(),
@@ -107,6 +124,7 @@ function Contact() {
   const onSendContactMessageSuccess = () => {
     toastr.success("Your message has been sent.");
     setFormData(initialFormData);
+    submissionIdRef.current = createSubmissionId();
   };
 
   const onSendContactMessageError = (error) => {

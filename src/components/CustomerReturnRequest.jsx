@@ -37,6 +37,22 @@ const createPhotoId = (file) => {
   return `${file.name}-${file.size}-${file.lastModified}-${Date.now()}-${Math.random()}`;
 };
 
+
+const createSubmissionId = () => {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+    /[xy]/g,
+    (character) => {
+      const random = Math.floor(Math.random() * 16);
+      const value = character === "x" ? random : (random & 0x3) | 0x8;
+      return value.toString(16);
+    },
+  );
+};
+
 function CustomerReturnRequest() {
   const [formData, setFormData] = useState(initialForm);
   const [returnReasons, setReturnReasons] = useState([]);
@@ -45,6 +61,7 @@ function CustomerReturnRequest() {
   const [loadingReasons, setLoadingReasons] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState(null);
+  const submissionIdRef = useRef(createSubmissionId());
 
   const selectedReason = useMemo(() => {
     return returnReasons.find(
@@ -264,6 +281,7 @@ function CustomerReturnRequest() {
 
     const payload = new FormData();
 
+    payload.append("ClientSubmissionId", submissionIdRef.current);
     payload.append("OrderNumber", formData.orderNumber.trim());
     payload.append("CustomerEmail", formData.customerEmail.trim());
     payload.append("RequestedPartName", formData.requestedPartName.trim());
@@ -289,6 +307,7 @@ function CustomerReturnRequest() {
       toastr.success("Return request submitted.");
       setFormData(initialForm);
       clearPhotos();
+      submissionIdRef.current = createSubmissionId();
     } catch (err) {
       showApiError(err, "Unable to submit return request.");
     } finally {
