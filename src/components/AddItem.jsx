@@ -136,7 +136,6 @@ function AddItem() {
   const requiredMissing = useMemo(() => {
     const required = [
       "name",
-      "year",
       "partNumber",
       "price",
       "catagoryId",
@@ -250,10 +249,15 @@ function AddItem() {
     return { yearStart, yearEnd };
   };
 
-  const formatYearRange = (yearStart, yearEnd) =>
-    Number(yearStart) === Number(yearEnd)
+  const formatYearRange = (yearStart, yearEnd) => {
+    if (yearStart == null || yearEnd == null || yearStart === "" || yearEnd === "") {
+      return "";
+    }
+
+    return Number(yearStart) === Number(yearEnd)
       ? String(yearStart)
       : `${yearStart} - ${yearEnd}`;
+  };
 
   const hydrateFromSourcePart = (sourcePart) => {
     if (!sourcePart) return;
@@ -500,17 +504,18 @@ function AddItem() {
 
   const getFitmentValidationError = () => {
     const normalizedFitments = [];
-    const primaryRange = parseYearRange(formData.year);
+    const primaryYearText = String(formData.year || "").trim();
+    const primaryRange = primaryYearText ? parseYearRange(primaryYearText) : null;
 
-    if (!primaryRange) {
-      return "Year(s) must be a four-digit year or range such as 1972 - 1979.";
+    if (primaryYearText && !primaryRange) {
+      return "Year(s) must be a four-digit year or closed range such as 1972 - 1979.";
     }
 
     if (formData.makeId) {
       normalizedFitments.push({
         makeId: String(formData.makeId),
-        yearStart: primaryRange.yearStart,
-        yearEnd: primaryRange.yearEnd,
+        yearStart: primaryRange?.yearStart ?? null,
+        yearEnd: primaryRange?.yearEnd ?? null,
         label: "Primary fitment",
       });
     }
@@ -530,20 +535,27 @@ function AddItem() {
 
       const yearStartText = String(fitment.yearStart || "").trim();
       const yearEndText = String(fitment.yearEnd || "").trim();
+      const hasYearStart = Boolean(yearStartText);
+      const hasYearEnd = Boolean(yearEndText);
 
-      if (!yearStartText || !yearEndText) {
-        return `Additional fitment ${rowNumber} needs both a start and end year.`;
+      if (hasYearStart !== hasYearEnd) {
+        return `Additional fitment ${rowNumber} needs both a start and end year, or neither.`;
       }
 
-      const yearStart = Number(yearStartText);
-      const yearEnd = Number(yearEndText);
+      let yearStart = null;
+      let yearEnd = null;
 
-      if (!Number.isInteger(yearStart) || !Number.isInteger(yearEnd)) {
-        return `Additional fitment ${rowNumber} needs valid whole-number years.`;
-      }
+      if (hasYearStart && hasYearEnd) {
+        yearStart = Number(yearStartText);
+        yearEnd = Number(yearEndText);
 
-      if (yearStart > yearEnd) {
-        return `Additional fitment ${rowNumber} has a start year after its end year.`;
+        if (!Number.isInteger(yearStart) || !Number.isInteger(yearEnd)) {
+          return `Additional fitment ${rowNumber} needs valid whole-number years.`;
+        }
+
+        if (yearStart > yearEnd) {
+          return `Additional fitment ${rowNumber} has a start year after its end year.`;
+        }
       }
 
       normalizedFitments.push({
@@ -557,7 +569,7 @@ function AddItem() {
     const seen = new Map();
 
     for (const fitment of normalizedFitments) {
-      const key = `${fitment.makeId}|${fitment.yearStart}|${fitment.yearEnd}`;
+      const key = `${fitment.makeId}|${fitment.yearStart ?? ""}|${fitment.yearEnd ?? ""}`;
 
       if (seen.has(key)) {
         return `${fitment.label} duplicates ${seen.get(key)}.`;
@@ -575,12 +587,15 @@ function AddItem() {
     payload.append("Name", formData.name.trim());
     payload.append("CatagoryId", formData.catagoryId);
     payload.append("MakeId", formData.makeId);
-    const primaryRange = parseYearRange(formData.year);
-    const normalizedYear = primaryRange
-      ? formatYearRange(primaryRange.yearStart, primaryRange.yearEnd)
-      : formData.year.trim();
+    const primaryYearText = String(formData.year || "").trim();
+    const primaryRange = primaryYearText ? parseYearRange(primaryYearText) : null;
 
-    payload.append("Year", normalizedYear);
+    if (primaryRange) {
+      payload.append(
+        "Year",
+        formatYearRange(primaryRange.yearStart, primaryRange.yearEnd),
+      );
+    }
     payload.append("ShippingPolicyId", formData.shippingPolicyId);
     payload.append("PartNumber", formData.partNumber.trim());
     payload.append("Description", formData.description.trim());
@@ -612,19 +627,23 @@ function AddItem() {
 
     let fitmentIndex = 0;
 
-    if (primaryRange && String(formData.makeId || "").trim()) {
+    if (String(formData.makeId || "").trim()) {
       payload.append(
         `Fitments[${fitmentIndex}].MakeId`,
         String(formData.makeId),
       );
-      payload.append(
-        `Fitments[${fitmentIndex}].YearStart`,
-        String(primaryRange.yearStart),
-      );
-      payload.append(
-        `Fitments[${fitmentIndex}].YearEnd`,
-        String(primaryRange.yearEnd),
-      );
+
+      if (primaryRange) {
+        payload.append(
+          `Fitments[${fitmentIndex}].YearStart`,
+          String(primaryRange.yearStart),
+        );
+        payload.append(
+          `Fitments[${fitmentIndex}].YearEnd`,
+          String(primaryRange.yearEnd),
+        );
+      }
+
       fitmentIndex++;
     }
 
@@ -633,10 +652,14 @@ function AddItem() {
       const yearStart = String(fitment.yearStart || "").trim();
       const yearEnd = String(fitment.yearEnd || "").trim();
 
-      if (makeId && yearStart && yearEnd) {
+      if (makeId) {
         payload.append(`Fitments[${fitmentIndex}].MakeId`, makeId);
-        payload.append(`Fitments[${fitmentIndex}].YearStart`, yearStart);
-        payload.append(`Fitments[${fitmentIndex}].YearEnd`, yearEnd);
+
+        if (yearStart && yearEnd) {
+          payload.append(`Fitments[${fitmentIndex}].YearStart`, yearStart);
+          payload.append(`Fitments[${fitmentIndex}].YearEnd`, yearEnd);
+        }
+
         fitmentIndex++;
       }
     });
@@ -845,14 +868,14 @@ function AddItem() {
               </div>
 
               <div>
-                <dt>Year(s)</dt>
+                <dt>Year(s) <span className="apd-subtle">(optional)</span></dt>
                 <dd>
                   <input
                     name="year"
                     value={formData.year}
                     onChange={handleChange}
                     className="apd-input"
-                    placeholder="e.g. 1972 or 1972 - 1979"
+                    placeholder="Optional: 1972 or 1972 - 1979"
                   />
                 </dd>
               </div>
@@ -1070,8 +1093,7 @@ function AddItem() {
               </div>
 
               <p className="apd-subtle">
-                The primary fitment comes from the Specs make/model and primary
-                year. Add cross-compatible makes and year ranges here.
+                The primary fitment comes from the Specs make/model. Years are optional; add them only when known. Add cross-compatible fitments here.
               </p>
 
               {fitments.length === 0 ? (
@@ -1098,7 +1120,7 @@ function AddItem() {
                         className="apd-fitment-row__year"
                         htmlFor={`additional-fitment-${index}-year-start`}
                       >
-                        <span>Year Start</span>
+                        <span>Year Start (optional)</span>
                         <input
                           id={`additional-fitment-${index}-year-start`}
                           className="apd-input"
@@ -1115,7 +1137,7 @@ function AddItem() {
                         className="apd-fitment-row__year"
                         htmlFor={`additional-fitment-${index}-year-end`}
                       >
-                        <span>Year End</span>
+                        <span>Year End (optional)</span>
                         <input
                           id={`additional-fitment-${index}-year-end`}
                           className="apd-input"

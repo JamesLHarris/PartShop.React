@@ -176,3 +176,45 @@
     height: 280px;
   }
 }
+
+/* v1.0.1: make the full customer and admin result card clickable. */
+.card-click-target {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.card-click-target:hover,
+.card-click-target:focus,
+.card-click-target:active,
+.card-click-target:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-click-target .card {
+  cursor: pointer;
+}
+
+.card-click-target:focus-visible {
+  outline: none;
+}
+
+.card-click-target:focus-visible .card {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 3px rgba(240, 173, 78, 0.65),
+    0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.card-click-target:active .card {
+  transform: translateY(-1px);
+}
+
+/* The card itself is now the interactive link; this remains the visual CTA. */
+.card-click-target .card-button {
+  display: block;
+  text-align: center;
+}

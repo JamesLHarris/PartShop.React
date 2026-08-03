@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import partsService from "../service/partsService";
 import "./CardStyles.css";
 
@@ -13,16 +13,8 @@ const buildImageUrl = (image) =>
           image.startsWith("/") ? image : `/${image}`
         }`;
 
-const buildLocationText = ({
-  siteName,
-  boxName,
-  otherBox,
-}) => {
-  const values = [
-    siteName,
-    boxName,
-    otherBox,
-  ]
+const buildLocationText = ({ siteName, boxName, otherBox }) => {
+  const values = [siteName, boxName, otherBox]
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
@@ -30,89 +22,76 @@ const buildLocationText = ({
 };
 
 function AdminCard(props) {
-  const navigate = useNavigate();
-
-  const partClickEvent = () => {
-    navigate(`/admin/part/${props.id}`);
-  };
-
   const imageUrl = buildImageUrl(props.photo);
   const formattedPrice = `$${parseFloat(props.price || 0).toFixed(2)}`;
   const locationText = buildLocationText(props);
 
   return (
     <div className="single-item admin-search-card">
-      <Card>
-        <Card.Body>
-          <Card.Title>
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                className="item-image"
-                alt={props.name || "Part"}
-              />
-            ) : (
-              <div className="item-image item-image--empty">
-                No Image
-              </div>
-            )}
-          </Card.Title>
+      <Link
+        className="card-click-target"
+        to={`/admin/part/${props.id}`}
+        aria-label={`Open admin details for ${props.name || "part"}`}
+      >
+        <Card>
+          <Card.Body>
+            <Card.Title>
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  className="item-image"
+                  alt={props.name || "Part"}
+                />
+              ) : (
+                <div className="item-image item-image--empty">No Image</div>
+              )}
+            </Card.Title>
 
-          <Card.Text as="div">
-            <div className="card-info-wrapper">
-              <div className="card-condition-row">
-                <div className="card-text">
-                  {props.condition?.name ??
-                    props.conditionName ??
-                    ""}
-                </div>
-              </div>
-
-              <div className="card-price">{formattedPrice}</div>
-
-              <div className="admin-card-summary">
-                {props.partNumber && (
-                  <div title={props.partNumber}>
-                    <strong>Part #:</strong> {props.partNumber}
+            <Card.Text as="div">
+              <div className="card-info-wrapper">
+                <div className="card-condition-row">
+                  <div className="card-text">
+                    {props.condition?.name ?? props.conditionName ?? ""}
                   </div>
-                )}
-
-                <div>
-                  <strong>Quantity:</strong>{" "}
-                  {Number(props.quantity || 0)}
                 </div>
 
-                {props.availableStatus && (
+                <div className="card-price">{formattedPrice}</div>
+
+                <div className="admin-card-summary">
+                  {props.partNumber && (
+                    <div title={props.partNumber}>
+                      <strong>Part #:</strong> {props.partNumber}
+                    </div>
+                  )}
+
                   <div>
-                    <strong>Status:</strong> {props.availableStatus}
+                    <strong>Quantity:</strong> {Number(props.quantity || 0)}
                   </div>
-                )}
 
-                <div
-                  className="admin-card-location"
-                  title={locationText}
-                >
-                  <strong>Location:</strong> {locationText}
+                  {props.availableStatus && (
+                    <div>
+                      <strong>Status:</strong> {props.availableStatus}
+                    </div>
+                  )}
+
+                  <div className="admin-card-location" title={locationText}>
+                    <strong>Location:</strong> {locationText}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card.Text>
+            </Card.Text>
 
-          <hr className="card-divider" />
-        </Card.Body>
+            <hr className="card-divider" />
+          </Card.Body>
 
-        <Card.Footer>
-          <div className="part-name">{props.name}</div>
-
-          <button
-            type="button"
-            className="card-button"
-            onClick={partClickEvent}
-          >
-            View
-          </button>
-        </Card.Footer>
-      </Card>
+          <Card.Footer>
+            <div className="part-name">{props.name}</div>
+            <span className="card-button" aria-hidden="true">
+              View
+            </span>
+          </Card.Footer>
+        </Card>
+      </Link>
     </div>
   );
 }

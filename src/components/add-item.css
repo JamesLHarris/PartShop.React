@@ -284,3 +284,57 @@ html {
     grid-column: auto;
   }
 }
+
+/* =========================
+   v1.0.1 - Add Item Specs spacing
+   ========================= */
+.apd-add .apd-specs .apd-form-dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.apd-add .apd-specs .apd-form-dl > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  align-content: start;
+}
+
+.apd-add .apd-specs .apd-form-dl dt {
+  color: #a8acb3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.apd-add .apd-specs .apd-form-dl dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.apd-add .apd-specs .apd-form-dl .apd-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.apd-add .apd-specs .apd-form-wide {
+  grid-column: 1 / -1;
+}
+
+.apd-add .apd-specs .apd-form-wide-dd,
+.apd-add .apd-specs .make-model-selector {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .apd-add .apd-specs .apd-form-dl {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .apd-add .apd-specs .apd-form-wide {
+    grid-column: auto;
+  }
+}

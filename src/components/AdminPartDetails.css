@@ -838,3 +838,61 @@
     order: 5;
   }
 }
+
+/* =========================
+   v1.0.1 - Admin Inspect Meta spacing
+   ========================= */
+.admin-part-details:not(.apd-add) .apd-meta .apd-dl {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.admin-part-details:not(.apd-add) .apd-meta .apd-dl > div {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(0, 1.7fr);
+  gap: 12px 18px;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 11px 0;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.admin-part-details:not(.apd-add) .apd-meta .apd-dl > div:first-child {
+  padding-top: 0;
+}
+
+.admin-part-details:not(.apd-add) .apd-meta .apd-dl > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.admin-part-details:not(.apd-add) .apd-meta .apd-dl dt {
+  color: #a8acb3;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.admin-part-details:not(.apd-add) .apd-meta .apd-dl dd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-part-details:not(.apd-add) .apd-meta .apd-desc {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #2a2a2a;
+}
+
+@media (max-width: 640px) {
+  .admin-part-details:not(.apd-add) .apd-meta .apd-dl > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    align-items: start;
+  }
+}
