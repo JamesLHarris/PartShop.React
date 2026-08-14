@@ -5,6 +5,7 @@ import partsService from "../service/partsService";
 import availableService from "../service/availableService";
 import conditionService from "../service/conditionService";
 import shippingPolicyService from "../service/shippingPolicyService";
+import catagoryService from "../service/catagoryService";
 import "./AdminPartDetails.css";
 import InLineNumber from "./InLineNumber";
 import InLineSelect from "./InLineSelect";
@@ -12,6 +13,55 @@ import InLineText from "./InLineText";
 import LocationModal from "./LocationModal";
 import AuditHistory from "./AuditHistory";
 import ImageDropZone from "./ImageDropZone";
+import MakeModelSelector from "./MakeModelSelector";
+
+function InlineShortText({ value, maxLength = 128, disabled, onSubmit, onCancel }) {
+  const [draft, setDraft] = useState(value ?? "");
+
+  const submit = () => {
+    const next = draft.trim();
+    if (!next) {
+      toastr.error("This field cannot be blank.");
+      return;
+    }
+    onSubmit(next);
+  };
+
+  return (
+    <span className="apd-inline apd-inline--short-text">
+      <input
+        type="text"
+        className="apd-input"
+        value={draft}
+        maxLength={maxLength}
+        disabled={disabled}
+        autoFocus
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel?.();
+          }
+        }}
+      />
+      <button type="button" className="apd-btn apd-btn--sm" disabled={disabled} onClick={submit}>
+        Save
+      </button>
+      <button
+        type="button"
+        className="apd-btn apd-btn--sm apd-btn--outlined"
+        disabled={disabled}
+        onClick={onCancel}
+      >
+        Cancel
+      </button>
+    </span>
+  );
+}
 
 function AdminPartDetails() {
   const { id } = useParams();
@@ -23,6 +73,10 @@ function AdminPartDetails() {
   const [conditionOptions, setConditionOptions] = useState([]);
   const [shippingPolicyOptions, setShippingPolicyOptions] = useState([]);
   const [availabilityOptions, setAvailabilityOptions] = useState([]);
+  const [catagoryOptions, setCatagoryOptions] = useState([]);
+  const [relationsEditing, setRelationsEditing] = useState(false);
+  const [categoryDrafts, setCategoryDrafts] = useState([]);
+  const [fitmentDrafts, setFitmentDrafts] = useState([]);
   const [isPublishingShopify, setIsPublishingShopify] = useState(false);
   const [isSyncingShopify, setIsSyncingShopify] = useState(false);
   const [isUnpublishingShopify, setIsUnpublishingShopify] = useState(false);
@@ -43,6 +97,8 @@ function AdminPartDetails() {
   };
 
   const [edit, setEdit] = useState({
+    name: false,
+    partNumber: false,
     price: false,
     quantity: false,
     availability: false,
@@ -285,6 +341,17 @@ function AdminPartDetails() {
       .catch(onError);
   }, []);
 
+  useEffect(() => {
+    catagoryService
+      .getAllCatagories()
+      .then((res) => {
+        const raw = res.item?.pagedItems || res.items || res.item || [];
+        setCatagoryOptions(Array.isArray(raw) ? raw : []);
+      })
+      .catch(onError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const vm = useMemo(() => {
     const p = part || {};
 
@@ -315,8 +382,11 @@ function AdminPartDetails() {
       id: p.id,
       name: p.name,
       category: p.catagoryName ?? get(p, "catagory", "name"),
+      primaryCatagoryId: p.catagoryId ?? get(p, "catagory", "id"),
       company: p.company ?? get(p, "make", "company"),
       model: p.modelName ?? get(p, "make", "model", "name"),
+      primaryMakeId: p.makeId ?? get(p, "make", "id"),
+      primaryModelId: p.modelId ?? get(p, "make", "model", "id"),
       year: p.year,
       partNumber: p.partnumber ?? p.partNumber,
 
@@ -399,13 +469,17 @@ function AdminPartDetails() {
 
       await refresh();
       setAuditRefreshToken((t) => t + 1);
+      return true;
     } catch (e) {
       console.error("PATCH failed", e);
       showApiError(e, "Update failed.");
+      return false;
     } finally {
       setSaving(false);
       saveLockRef.current = false;
       setEdit({
+        name: false,
+        partNumber: false,
         price: false,
         quantity: false,
         availability: false,
@@ -415,6 +489,213 @@ function AdminPartDetails() {
         condition: false,
         shippingPolicy: false,
       });
+    }
+  };
+
+  const parseLegacyYear = (value) => {
+    const text = String(value ?? "").trim().replace(/[–—]/g, "-");
+    if (!text) return { yearStart: "", yearEnd: "" };
+
+    const pieces = text.split("-").map((piece) => piece.trim()).filter(Boolean);
+    if (pieces.length === 1 && /^\d{4}$/.test(pieces[0])) {
+      return { yearStart: pieces[0], yearEnd: pieces[0] };
+    }
+    if (pieces.length === 2 && /^\d{4}$/.test(pieces[0]) && /^\d{4}$/.test(pieces[1])) {
+      return { yearStart: pieces[0], yearEnd: pieces[1] };
+    }
+    return { yearStart: "", yearEnd: "" };
+  };
+
+  const beginRelationsEdit = () => {
+    if (saving) return;
+
+    const categories = vm.categories.map((cat) => ({
+      catagoryId: String(cat.catagoryId || ""),
+    }));
+
+    const primaryCategoryIndex = categories.findIndex(
+      (cat) => String(cat.catagoryId) === String(vm.primaryCatagoryId || ""),
+    );
+    if (primaryCategoryIndex > 0) {
+      const [primary] = categories.splice(primaryCategoryIndex, 1);
+      categories.unshift(primary);
+    }
+    if (categories.length === 0 && vm.primaryCatagoryId) {
+      categories.push({ catagoryId: String(vm.primaryCatagoryId) });
+    }
+
+    const fitments = vm.fitments.map((fitment) => ({
+      makeId: String(fitment.makeId || ""),
+      companyMakeId: String(fitment.makeId || ""),
+      modelId: String(fitment.modelId || ""),
+      yearStart: fitment.yearStart == null ? "" : String(fitment.yearStart),
+      yearEnd: fitment.yearEnd == null ? "" : String(fitment.yearEnd),
+    }));
+
+    const primaryRange = parseLegacyYear(vm.year);
+    let primaryFitmentIndex = fitments.findIndex((fitment) => {
+      if (String(fitment.makeId) !== String(vm.primaryMakeId || "")) return false;
+      if (!primaryRange.yearStart && !primaryRange.yearEnd) {
+        return !fitment.yearStart && !fitment.yearEnd;
+      }
+      return (
+        String(fitment.yearStart) === primaryRange.yearStart &&
+        String(fitment.yearEnd) === primaryRange.yearEnd
+      );
+    });
+    if (primaryFitmentIndex < 0) {
+      primaryFitmentIndex = fitments.findIndex(
+        (fitment) => String(fitment.makeId) === String(vm.primaryMakeId || ""),
+      );
+    }
+    if (primaryFitmentIndex > 0) {
+      const [primary] = fitments.splice(primaryFitmentIndex, 1);
+      fitments.unshift(primary);
+    }
+    if (fitments.length === 0 && vm.primaryMakeId) {
+      fitments.push({
+        makeId: String(vm.primaryMakeId),
+        companyMakeId: String(vm.primaryMakeId),
+        modelId: String(vm.primaryModelId || ""),
+        yearStart: primaryRange.yearStart,
+        yearEnd: primaryRange.yearEnd,
+      });
+    }
+
+    setCategoryDrafts(categories);
+    setFitmentDrafts(fitments);
+    setRelationsEditing(true);
+  };
+
+  const updateCategoryDraft = (index, value) => {
+    setCategoryDrafts((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, catagoryId: value } : item)),
+    );
+  };
+
+  const addCategoryDraft = () => {
+    setCategoryDrafts((prev) => [...prev, { catagoryId: "" }]);
+  };
+
+  const removeCategoryDraft = (index) => {
+    setCategoryDrafts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateFitmentDraft = (index, field, value) => {
+    setFitmentDrafts((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    );
+  };
+
+  const updateFitmentDraftSelection = (index, selection) => {
+    setFitmentDrafts((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              makeId: selection.makeId ? String(selection.makeId) : "",
+              companyMakeId: selection.companyMakeId
+                ? String(selection.companyMakeId)
+                : item.companyMakeId || "",
+              modelId: selection.modelId ? String(selection.modelId) : "",
+            }
+          : item,
+      ),
+    );
+  };
+
+  const addFitmentDraft = () => {
+    setFitmentDrafts((prev) => [
+      ...prev,
+      { makeId: "", companyMakeId: "", modelId: "", yearStart: "", yearEnd: "" },
+    ]);
+  };
+
+  const removeFitmentDraft = (index) => {
+    setFitmentDrafts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const saveRelations = async () => {
+    if (categoryDrafts.length === 0) {
+      toastr.error("At least one category is required.");
+      return;
+    }
+    if (fitmentDrafts.length === 0) {
+      toastr.error("At least one make/model fitment is required.");
+      return;
+    }
+
+    const categoryIds = categoryDrafts.map((item) => String(item.catagoryId || "").trim());
+    if (categoryIds.some((value) => !value)) {
+      toastr.error("Choose a category for every category row.");
+      return;
+    }
+    if (new Set(categoryIds).size !== categoryIds.length) {
+      toastr.error("A category cannot be assigned more than once.");
+      return;
+    }
+
+    const normalizedFitments = [];
+    const seenFitments = new Set();
+
+    for (let index = 0; index < fitmentDrafts.length; index++) {
+      const fitment = fitmentDrafts[index];
+      const row = index + 1;
+      if (!fitment.makeId || !fitment.modelId) {
+        toastr.error(`Fitment ${row} needs both a make and model.`);
+        return;
+      }
+
+      const startText = String(fitment.yearStart || "").trim();
+      const endText = String(fitment.yearEnd || "").trim();
+      if (Boolean(startText) !== Boolean(endText)) {
+        toastr.error(`Fitment ${row} needs both a start and end year, or neither.`);
+        return;
+      }
+
+      let yearStart = null;
+      let yearEnd = null;
+      if (startText && endText) {
+        yearStart = Number(startText);
+        yearEnd = Number(endText);
+        if (
+          !Number.isInteger(yearStart) ||
+          !Number.isInteger(yearEnd) ||
+          yearStart < 1900 ||
+          yearStart > 3000 ||
+          yearEnd < 1900 ||
+          yearEnd > 3000
+        ) {
+          toastr.error(`Fitment ${row} needs valid whole-number years between 1900 and 3000.`);
+          return;
+        }
+        if (yearStart > yearEnd) {
+          toastr.error(`Fitment ${row} has a start year after its end year.`);
+          return;
+        }
+      }
+
+      const key = `${fitment.makeId}|${yearStart ?? ""}|${yearEnd ?? ""}`;
+      if (seenFitments.has(key)) {
+        toastr.error(`Fitment ${row} duplicates another fitment.`);
+        return;
+      }
+      seenFitments.add(key);
+
+      normalizedFitments.push({
+        makeId: Number(fitment.makeId),
+        yearStart,
+        yearEnd,
+      });
+    }
+
+    const saved = await patchAndRefresh({
+      categories: categoryIds.map((catagoryId) => ({ catagoryId: Number(catagoryId) })),
+      fitments: normalizedFitments,
+    });
+
+    if (saved) {
+      setRelationsEditing(false);
     }
   };
 
@@ -444,7 +725,27 @@ function AdminPartDetails() {
     <div className="admin-part-details">
       <header className="apd-header">
         <div className="apd-title">
-          <h2>{vm.name}</h2>
+          {edit.name ? (
+            <InlineShortText
+              value={vm.name}
+              maxLength={128}
+              disabled={saving}
+              onSubmit={(name) => patchAndRefresh({ name })}
+              onCancel={() => setEdit((e) => ({ ...e, name: false }))}
+            />
+          ) : (
+            <>
+              <h2>{vm.name}</h2>
+              <button
+                type="button"
+                className="apd-btn apd-btn--outlined apd-btn--xs"
+                disabled={saving}
+                onClick={() => setEdit((e) => ({ ...e, name: true }))}
+              >
+                Edit Name
+              </button>
+            </>
+          )}
           {vm.availableStatus && (
             <span
               className={`apd-badge ${
@@ -613,11 +914,37 @@ function AdminPartDetails() {
             <dl className="apd-dl">
               <div>
                 <dt>Part #</dt>
-                <dd>{vm.partNumber || "—"}</dd>
+                <dd>
+                  {edit.partNumber ? (
+                    <InlineShortText
+                      value={vm.partNumber || ""}
+                      maxLength={128}
+                      disabled={saving}
+                      onSubmit={(partNumber) => patchAndRefresh({ partNumber })}
+                      onCancel={() =>
+                        setEdit((e) => ({ ...e, partNumber: false }))
+                      }
+                    />
+                  ) : (
+                    <span className="apd-inline-wrap">
+                      <span>{vm.partNumber || "—"}</span>
+                      <button
+                        type="button"
+                        className="apd-btn apd-btn--outlined apd-btn--xs"
+                        disabled={saving}
+                        onClick={() =>
+                          setEdit((e) => ({ ...e, partNumber: true }))
+                        }
+                      >
+                        Edit
+                      </button>
+                    </span>
+                  )}
+                </dd>
               </div>
               <div>
-                <dt>Primary Year</dt>
-                <dd>{vm.year ?? "—"}</dd>
+                <dt>Year(s)</dt>
+                <dd>{vm.year || "—"}</dd>
               </div>
               <div>
                 <dt>Primary Category</dt>
@@ -632,6 +959,17 @@ function AdminPartDetails() {
                 <dd>{vm.model || "—"}</dd>
               </div>
             </dl>
+
+            <div className="apd-actions">
+              <button
+                type="button"
+                className="apd-btn apd-btn--outlined apd-btn--sm"
+                disabled={saving || relationsEditing}
+                onClick={beginRelationsEdit}
+              >
+                Edit Make / Model / Years / Categories
+              </button>
+            </div>
           </article>
 
           <article className="apd-card apd-location">
@@ -701,7 +1039,7 @@ function AdminPartDetails() {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           const v = e.currentTarget.value?.trim();
-                          patchAndRefresh({ otherBox: v || null });
+                          patchAndRefresh({ otherBox: v || "" });
                         }
                         if (e.key === "Escape") {
                           e.preventDefault();
@@ -716,7 +1054,7 @@ function AdminPartDetails() {
                         const input =
                           e.currentTarget.parentElement?.querySelector("input");
                         const v = input?.value?.trim();
-                        patchAndRefresh({ otherBox: v || null });
+                        patchAndRefresh({ otherBox: v || "" });
                       }}
                     >
                       Save
@@ -748,52 +1086,230 @@ function AdminPartDetails() {
           </article>
 
           <article className="apd-card apd-relations">
-            <h3>Compatibility & Categories</h3>
-
-            <div className="apd-relations-section">
-              <h4>Categories</h4>
-              {vm.categories.length > 0 ? (
-                <div className="apd-chip-list">
-                  {vm.categories.map((cat) => (
-                    <span
-                      key={cat.id || `${cat.catagoryId}-${cat.catagoryName}`}
-                      className="apd-chip"
-                    >
-                      {cat.catagoryName || `Category #${cat.catagoryId}`}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="apd-empty-note">No related categories.</div>
-              )}
+            <div className="apd-relations-header">
+              <h3>Compatibility & Categories</h3>
+              {!relationsEditing ? (
+                <button
+                  type="button"
+                  className="apd-btn apd-btn--outlined apd-btn--sm"
+                  disabled={saving}
+                  onClick={beginRelationsEdit}
+                >
+                  Edit All
+                </button>
+              ) : null}
             </div>
 
-            <div className="apd-relations-section">
-              <h4>Fitments</h4>
-              {vm.fitments.length > 0 ? (
-                <div className="apd-fitment-list">
-                  {vm.fitments.map((fitment) => (
-                    <div
-                      key={
-                        fitment.id ||
-                        `${fitment.makeId}-${fitment.modelId}-${fitment.yearStart}-${fitment.yearEnd}`
-                      }
-                      className="apd-fitment-card"
+            {relationsEditing ? (
+              <>
+                <div className="apd-relations-section">
+                  <div className="apd-relations-header">
+                    <h4>Categories</h4>
+                    <button
+                      type="button"
+                      className="apd-btn apd-btn--outlined apd-btn--sm"
+                      disabled={saving}
+                      onClick={addCategoryDraft}
                     >
-                      <div className="apd-fitment-title">
-                        {fitment.company || "—"} {fitment.modelName || ""}
+                      Add Category
+                    </button>
+                  </div>
+                  <p className="apd-subtle">
+                    The first row is the primary category. Dragging is not needed;
+                    change the first selection to change the primary category.
+                  </p>
+
+                  <div className="apd-repeater">
+                    {categoryDrafts.map((item, index) => {
+                      const takenIds = categoryDrafts
+                        .map((draft, draftIndex) =>
+                          draftIndex === index ? null : String(draft.catagoryId || ""),
+                        )
+                        .filter(Boolean);
+
+                      return (
+                        <div key={`category-edit-${index}`} className="apd-repeater-row">
+                          <label className="apd-editor-label">
+                            <span>{index === 0 ? "Primary Category" : `Additional Category ${index}`}</span>
+                            <select
+                              className="apd-input"
+                              value={item.catagoryId}
+                              disabled={saving}
+                              onChange={(e) => updateCategoryDraft(index, e.target.value)}
+                            >
+                              <option value="">Select Category</option>
+                              {catagoryOptions
+                                .filter((cat) => !takenIds.includes(String(cat.id)))
+                                .map((cat) => (
+                                  <option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </option>
+                                ))}
+                            </select>
+                          </label>
+                          <button
+                            type="button"
+                            className="apd-btn apd-btn--outlined apd-btn--sm"
+                            disabled={saving || categoryDrafts.length <= 1}
+                            onClick={() => removeCategoryDraft(index)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="apd-relations-section">
+                  <div className="apd-relations-header">
+                    <h4>Fitments</h4>
+                    <button
+                      type="button"
+                      className="apd-btn apd-btn--outlined apd-btn--sm"
+                      disabled={saving}
+                      onClick={addFitmentDraft}
+                    >
+                      Add Fitment
+                    </button>
+                  </div>
+                  <p className="apd-subtle">
+                    The first row is the primary make/model and controls the Year(s)
+                    shown in Specs. Years are optional, but start and end must be
+                    entered together.
+                  </p>
+
+                  <div className="apd-repeater">
+                    {fitmentDrafts.map((fitment, index) => (
+                      <div key={`fitment-edit-${index}`} className="apd-fitment-edit-row">
+                        <div className="apd-fitment-edit-heading">
+                          {index === 0 ? "Primary Fitment" : `Additional Fitment ${index}`}
+                        </div>
+                        <div className="apd-fitment-edit-grid">
+                          <div className="apd-fitment-edit-selector">
+                            <MakeModelSelector
+                              idPrefix={`admin-fitment-${index}`}
+                              initialMakeId={fitment.makeId || fitment.companyMakeId}
+                              initialModelId={fitment.modelId}
+                              disabled={saving}
+                              onSelectionChange={(selection) =>
+                                updateFitmentDraftSelection(index, selection)
+                              }
+                            />
+                          </div>
+
+                          <label className="apd-editor-label">
+                            <span>Year Start</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={4}
+                              className="apd-input"
+                              placeholder="Optional"
+                              value={fitment.yearStart}
+                              disabled={saving}
+                              onChange={(e) =>
+                                updateFitmentDraft(index, "yearStart", e.target.value)
+                              }
+                            />
+                          </label>
+
+                          <label className="apd-editor-label">
+                            <span>Year End</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={4}
+                              className="apd-input"
+                              placeholder="Optional"
+                              value={fitment.yearEnd}
+                              disabled={saving}
+                              onChange={(e) =>
+                                updateFitmentDraft(index, "yearEnd", e.target.value)
+                              }
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            className="apd-btn apd-btn--outlined apd-btn--sm apd-fitment-edit-remove"
+                            disabled={saving || fitmentDrafts.length <= 1}
+                            onClick={() => removeFitmentDraft(index)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                      <div className="apd-subtle">
-                        Years:{" "}
-                        {renderYearRange(fitment.yearStart, fitment.yearEnd)}
-                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="apd-actions apd-actions--editor-save">
+                  <button
+                    type="button"
+                    className="apd-btn"
+                    disabled={saving}
+                    onClick={saveRelations}
+                  >
+                    {saving ? "Saving..." : "Save Compatibility & Categories"}
+                  </button>
+                  <button
+                    type="button"
+                    className="apd-btn apd-btn--outlined"
+                    disabled={saving}
+                    onClick={() => setRelationsEditing(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="apd-relations-section">
+                  <h4>Categories</h4>
+                  {vm.categories.length > 0 ? (
+                    <div className="apd-chip-list">
+                      {vm.categories.map((cat) => (
+                        <span
+                          key={cat.id || `${cat.catagoryId}-${cat.catagoryName}`}
+                          className="apd-chip"
+                        >
+                          {cat.catagoryName || `Category #${cat.catagoryId}`}
+                        </span>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="apd-empty-note">No related categories.</div>
+                  )}
                 </div>
-              ) : (
-                <div className="apd-empty-note">No related fitments.</div>
-              )}
-            </div>
+
+                <div className="apd-relations-section">
+                  <h4>Fitments</h4>
+                  {vm.fitments.length > 0 ? (
+                    <div className="apd-fitment-list">
+                      {vm.fitments.map((fitment) => (
+                        <div
+                          key={
+                            fitment.id ||
+                            `${fitment.makeId}-${fitment.modelId}-${fitment.yearStart}-${fitment.yearEnd}`
+                          }
+                          className="apd-fitment-card"
+                        >
+                          <div className="apd-fitment-title">
+                            {fitment.company || "—"} {fitment.modelName || ""}
+                          </div>
+                          <div className="apd-subtle">
+                            Years: {renderYearRange(fitment.yearStart, fitment.yearEnd)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="apd-empty-note">No related fitments.</div>
+                  )}
+                </div>
+              </>
+            )}
           </article>
 
           <article className="apd-card apd-meta">
@@ -1001,7 +1517,7 @@ function AdminPartDetails() {
                   value={vm.adminNotes || ""}
                   disabled={saving}
                   onSubmit={(text) =>
-                    patchAndRefresh({ adminNotes: text || null })
+                    patchAndRefresh({ adminNotes: text || "" })
                   }
                   onCancel={() => setEdit((e) => ({ ...e, adminNotes: false }))}
                 />
