@@ -161,6 +161,7 @@ function CustomerPartDetails() {
       model: p.modelName ?? get(p, "make", "model", "name"),
       year: p.year,
       partNumber: p.partnumber ?? p.partNumber,
+      brand: p.brand ?? p.Brand ?? "",
       availableStatus: p.availableStatus ?? get(p, "available", "status"),
       availableId: p.availableId ?? get(p, "available", "id"),
       conditionId: p.conditionId ?? get(p, "condition", "id"),
@@ -448,6 +449,10 @@ function CustomerPartDetails() {
               <div>
                 <dt>Part #</dt>
                 <dd>{vm.partNumber || "—"}</dd>
+              </div>
+              <div>
+                <dt>Brand</dt>
+                <dd>{vm.brand || "—"}</dd>
               </div>
               <div>
                 <dt>Year(s)</dt>

@@ -15,12 +15,19 @@ import AuditHistory from "./AuditHistory";
 import ImageDropZone from "./ImageDropZone";
 import MakeModelSelector from "./MakeModelSelector";
 
-function InlineShortText({ value, maxLength = 128, disabled, onSubmit, onCancel }) {
+function InlineShortText({
+  value,
+  maxLength = 128,
+  disabled,
+  allowEmpty = false,
+  onSubmit,
+  onCancel,
+}) {
   const [draft, setDraft] = useState(value ?? "");
 
   const submit = () => {
     const next = draft.trim();
-    if (!next) {
+    if (!next && !allowEmpty) {
       toastr.error("This field cannot be blank.");
       return;
     }
@@ -99,6 +106,7 @@ function AdminPartDetails() {
   const [edit, setEdit] = useState({
     name: false,
     partNumber: false,
+    brand: false,
     price: false,
     quantity: false,
     availability: false,
@@ -389,6 +397,7 @@ function AdminPartDetails() {
       primaryModelId: p.modelId ?? get(p, "make", "model", "id"),
       year: p.year,
       partNumber: p.partnumber ?? p.partNumber,
+      brand: p.brand ?? p.Brand ?? "",
 
       availableStatus: p.availableStatus ?? get(p, "available", "status"),
       availableId: p.availableId ?? get(p, "available", "id"),
@@ -480,6 +489,7 @@ function AdminPartDetails() {
       setEdit({
         name: false,
         partNumber: false,
+        brand: false,
         price: false,
         quantity: false,
         availability: false,
@@ -934,6 +944,37 @@ function AdminPartDetails() {
                         disabled={saving}
                         onClick={() =>
                           setEdit((e) => ({ ...e, partNumber: true }))
+                        }
+                      >
+                        Edit
+                      </button>
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Brand</dt>
+                <dd>
+                  {edit.brand ? (
+                    <InlineShortText
+                      value={vm.brand || ""}
+                      maxLength={128}
+                      disabled={saving}
+                      allowEmpty
+                      onSubmit={(brand) => patchAndRefresh({ brand })}
+                      onCancel={() =>
+                        setEdit((e) => ({ ...e, brand: false }))
+                      }
+                    />
+                  ) : (
+                    <span className="apd-inline-wrap">
+                      <span>{vm.brand || "—"}</span>
+                      <button
+                        type="button"
+                        className="apd-btn apd-btn--outlined apd-btn--xs"
+                        disabled={saving}
+                        onClick={() =>
+                          setEdit((e) => ({ ...e, brand: true }))
                         }
                       >
                         Edit

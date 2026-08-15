@@ -18,6 +18,7 @@ const initialForm = {
   name: "",
   year: "",
   partNumber: "",
+  brand: "",
   description: "",
   price: "",
   quantity: "1",
@@ -319,6 +320,7 @@ function AddItem() {
       name: safeString(sourcePart.name),
       year: primaryYearText,
       partNumber: safeString(sourcePart.partnumber ?? sourcePart.partNumber),
+      brand: safeString(sourcePart.brand ?? sourcePart.Brand),
       description: safeString(sourcePart.description),
       price: safeString(sourcePart.price),
       quantity: safeString(sourcePart.quantity ?? "1"),
@@ -598,6 +600,9 @@ function AddItem() {
     }
     payload.append("ShippingPolicyId", formData.shippingPolicyId);
     payload.append("PartNumber", formData.partNumber.trim());
+    if (String(formData.brand || "").trim()) {
+      payload.append("Brand", formData.brand.trim());
+    }
     payload.append("Description", formData.description.trim());
     payload.append("Price", formData.price);
     payload.append("Quantity", formData.quantity || "1");
@@ -888,6 +893,20 @@ function AddItem() {
                     value={formData.partNumber}
                     onChange={handleChange}
                     className="apd-input"
+                  />
+                </dd>
+              </div>
+
+              <div>
+                <dt>Brand <span className="apd-subtle">(optional)</span></dt>
+                <dd>
+                  <input
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    className="apd-input"
+                    maxLength={128}
+                    placeholder="e.g. Bosch, Mahle, Lemförder"
                   />
                 </dd>
               </div>
