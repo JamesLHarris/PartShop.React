@@ -14,6 +14,7 @@ import LocationModal from "./LocationModal";
 import AuditHistory from "./AuditHistory";
 import ImageDropZone from "./ImageDropZone";
 import MakeModelSelector from "./MakeModelSelector";
+import PhotoLightbox from "./PhotoLightbox";
 
 function InlineShortText({
   value,
@@ -92,6 +93,7 @@ function AdminPartDetails() {
 
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [newGalleryFiles, setNewGalleryFiles] = useState([]);
 
   const [locModalOpen, setLocModalOpen] = useState(false);
@@ -729,6 +731,30 @@ function AdminPartDetails() {
   if (!part) return <p>Not found.</p>;
 
   const galleryMain = activeImage || vm.image;
+  const lightboxImages = [];
+  const seenLightboxImages = new Set();
+
+  const addLightboxImage = (src, alt) => {
+    if (!src || seenLightboxImages.has(src)) return;
+    seenLightboxImages.add(src);
+    lightboxImages.push({ src, alt });
+  };
+
+  images.forEach((img, imageIndex) => {
+    addLightboxImage(
+      buildImageUrl(img.url),
+      `${vm.name} photo ${imageIndex + 1}`,
+    );
+  });
+
+  if (galleryMain && !seenLightboxImages.has(galleryMain)) {
+    lightboxImages.unshift({ src: galleryMain, alt: vm.name });
+  }
+
+  const lightboxStartIndex = Math.max(
+    lightboxImages.findIndex((image) => image.src === galleryMain),
+    0,
+  );
   const isContactOnly = vm.allowsOnlineCheckout === false;
 
   return (
@@ -851,7 +877,14 @@ function AdminPartDetails() {
           <aside className="apd-card apd-media">
             <div className="apd-main-image-container">
               {galleryMain ? (
-                <img src={galleryMain} alt={vm.name} className="apd-photo" />
+                <button
+                  type="button"
+                  className="apd-main-image-button"
+                  aria-label={`Open photo viewer for ${vm.name}`}
+                  onClick={() => setLightboxOpen(true)}
+                >
+                  <img src={galleryMain} alt={vm.name} className="apd-photo" />
+                </button>
               ) : (
                 <div className="apd-photo apd-photo--empty">No Image</div>
               )}
@@ -1598,6 +1631,17 @@ function AdminPartDetails() {
         onClose={() => setLocModalOpen(false)}
         onSave={handleLocationSave}
         initial={initialLocation}
+      />
+
+      <PhotoLightbox
+        open={lightboxOpen}
+        images={lightboxImages}
+        startIndex={lightboxStartIndex}
+        title={`${vm.name} photos`}
+        onClose={() => setLightboxOpen(false)}
+        onImageChange={(src) => {
+          if (src) setActiveImage(src);
+        }}
       />
     </div>
   );
