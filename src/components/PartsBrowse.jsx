@@ -8,7 +8,6 @@ import conditionService from "../service/conditionService";
 import { SearchItemFilterPanel } from "./SearchItem";
 import "./PartsBrowse.css";
 
-
 const cleanIds = (values = []) =>
   Array.from(
     new Set(
@@ -131,11 +130,11 @@ function PartsBrowse() {
         : [];
       const hasFilters = Boolean(
         q ||
-          makeId ||
-          modelId ||
-          categoryId ||
-          categoryIds.length > 0 ||
-          conditionIds.length > 0,
+        makeId ||
+        modelId ||
+        categoryId ||
+        categoryIds.length > 0 ||
+        conditionIds.length > 0,
       );
 
       try {
@@ -277,12 +276,11 @@ function PartsBrowse() {
 
   const hasActiveFilters = Boolean(
     filters?.makeId ||
-      filters?.modelId ||
-      filters?.categoryId ||
-      (Array.isArray(filters?.categoryIds) && filters.categoryIds.length > 0) ||
-      (Array.isArray(filters?.conditionIds) &&
-        filters.conditionIds.length > 0) ||
-      (filters?.q ?? "").trim(),
+    filters?.modelId ||
+    filters?.categoryId ||
+    (Array.isArray(filters?.categoryIds) && filters.categoryIds.length > 0) ||
+    (Array.isArray(filters?.conditionIds) && filters.conditionIds.length > 0) ||
+    (filters?.q ?? "").trim(),
   );
 
   return (
@@ -302,8 +300,6 @@ function PartsBrowse() {
           description={
             <>
               Select one or more categories or conditions to narrow your search.
-              Multiple selections in the same row are matched as “or,” and the
-              category and condition rows are combined as “and.”
             </>
           }
           ariaLabelPrefix="Customer"
@@ -338,7 +334,9 @@ function PartsBrowse() {
 
           <div className="page-buttons">
             <button
-              onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+              onClick={() =>
+                setPageIndex((current) => Math.max(0, current - 1))
+              }
               disabled={pageIndex <= 0 || totalPages <= 1 || vm.isLoading}
             >
               Prev
@@ -383,9 +381,7 @@ function PartsBrowse() {
 
             <button
               onClick={() =>
-                setPageIndex((current) =>
-                  Math.min(totalPages - 1, current + 1),
-                )
+                setPageIndex((current) => Math.min(totalPages - 1, current + 1))
               }
               disabled={
                 pageIndex >= totalPages - 1 || totalPages <= 1 || vm.isLoading

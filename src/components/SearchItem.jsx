@@ -70,8 +70,8 @@ export function SearchItemFilterPanel({
   title = "Refine Inventory",
   description = (
     <>
-      Multiple selections in the same row are matched as “or.” The category
-      and condition rows are combined as “and.”
+      Multiple selections in the same row are matched as “or.” The category and
+      condition rows are combined as “and.”
     </>
   ),
   ariaLabelPrefix = "Admin",
@@ -331,9 +331,7 @@ function SearchItem() {
         return;
       }
 
-      let nextResults = Array.isArray(response?.item)
-        ? response.item
-        : [];
+      let nextResults = Array.isArray(response?.item) ? response.item : [];
 
       if (nameQuery && partNumberQuery) {
         const normalizedPartNumber = normalizeSearchText(partNumberQuery);
@@ -440,10 +438,7 @@ function SearchItem() {
     const maxButtons = 9;
     const start = Math.max(
       0,
-      Math.min(
-        pageIndex - Math.floor(maxButtons / 2),
-        totalPages - maxButtons,
-      ),
+      Math.min(pageIndex - Math.floor(maxButtons / 2), totalPages - maxButtons),
     );
     const end = Math.min(totalPages, start + maxButtons);
 
