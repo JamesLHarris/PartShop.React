@@ -1,10 +1,49 @@
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import partsService from "../service/partsService";
 import toastr from "toastr";
 import { useEffect, useMemo, useRef, useState } from "react";
 import PartCard from "./PartCard";
-import BrowseFilterBar from "./BrowseFilterBar";
+import catagoryService from "../service/catagoryService";
+import conditionService from "../service/conditionService";
+import { SearchItemFilterPanel } from "./SearchItem";
 import "./PartsBrowse.css";
+
+
+const cleanIds = (values = []) =>
+  Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map(Number)
+        .filter((value) => Number.isInteger(value) && value > 0),
+    ),
+  ).sort((left, right) => left - right);
+
+const toggleId = (values, id) => {
+  const current = cleanIds(values);
+  return current.includes(id)
+    ? current.filter((value) => value !== id)
+    : [...current, id].sort((left, right) => left - right);
+};
+
+const buildBrowsePath = (filters = {}) => {
+  const params = new URLSearchParams();
+  const q = String(filters?.q ?? "").trim();
+
+  if (q) params.set("q", q);
+  if (filters?.makeId) params.set("makeId", String(filters.makeId));
+  if (filters?.modelId) params.set("modelId", String(filters.modelId));
+
+  cleanIds(filters?.categoryIds).forEach((id) =>
+    params.append("categoryIds", String(id)),
+  );
+
+  cleanIds(filters?.conditionIds).forEach((id) =>
+    params.append("conditionIds", String(id)),
+  );
+
+  const query = params.toString();
+  return `/browse${query ? `?${query}` : ""}`;
+};
 
 function PartsBrowse() {
   const {
@@ -17,6 +56,11 @@ function PartsBrowse() {
     pageSizes,
   } = useOutletContext();
 
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [conditions, setConditions] = useState([]);
+  const [areFiltersLoading, setAreFiltersLoading] = useState(true);
+
   const [vm, setVm] = useState({
     items: [],
     totalCount: 0,
@@ -25,6 +69,49 @@ function PartsBrowse() {
 
   // Guards against race conditions from quick filter and pagination changes.
   const requestSeq = useRef(0);
+
+  // These are public lookup endpoints used by the customer header already.
+  // Search results themselves continue to use /api/home/search/customer.
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.allSettled([
+      catagoryService.getAllCatagories(),
+      conditionService.getAllConditions(),
+    ]).then(([categoryResult, conditionResult]) => {
+      if (!isMounted) return;
+
+      setCategories(
+        categoryResult.status === "fulfilled" &&
+          Array.isArray(categoryResult.value?.item)
+          ? categoryResult.value.item
+          : [],
+      );
+
+      setConditions(
+        conditionResult.status === "fulfilled" &&
+          Array.isArray(conditionResult.value?.item)
+          ? conditionResult.value.item
+          : [],
+      );
+
+      setAreFiltersLoading(false);
+
+      if (
+        categoryResult.status === "rejected" ||
+        conditionResult.status === "rejected"
+      ) {
+        toastr.warning(
+          "Some customer search filters could not be loaded.",
+          "Filters",
+        );
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const loadParts = async () => {
@@ -123,6 +210,44 @@ function PartsBrowse() {
     pageSize,
   ]);
 
+  const selectedCategoryIds = cleanIds(filters?.categoryIds);
+  const selectedConditionIds = cleanIds(filters?.conditionIds);
+
+  const applyCustomerFilters = (patch) => {
+    const nextFilters = {
+      ...filters,
+      ...patch,
+      categoryId: null,
+    };
+
+    handleHeaderChange?.({
+      ...patch,
+      categoryId: null,
+    });
+
+    setPageIndex(0);
+    navigate(buildBrowsePath(nextFilters), { replace: true });
+  };
+
+  const handleToggleCategory = (categoryId) => {
+    applyCustomerFilters({
+      categoryIds: toggleId(selectedCategoryIds, categoryId),
+    });
+  };
+
+  const handleToggleCondition = (conditionId) => {
+    applyCustomerFilters({
+      conditionIds: toggleId(selectedConditionIds, conditionId),
+    });
+  };
+
+  const handleClearRefinements = () => {
+    applyCustomerFilters({
+      categoryIds: [],
+      conditionIds: [],
+    });
+  };
+
   const cards = useMemo(
     () =>
       vm.items.map((part) => (
@@ -162,11 +287,28 @@ function PartsBrowse() {
 
   return (
     <>
-      <BrowseFilterBar
-        filters={filters}
-        onChange={handleHeaderChange}
-        disabled={vm.isLoading}
-      />
+      <div className="browse-filter-bar customer-search-item-filters">
+        <SearchItemFilterPanel
+          categories={categories}
+          conditions={conditions}
+          selectedCategoryIds={selectedCategoryIds}
+          selectedConditionIds={selectedConditionIds}
+          onToggleCategory={handleToggleCategory}
+          onToggleCondition={handleToggleCondition}
+          onClear={handleClearRefinements}
+          disabled={vm.isLoading}
+          loading={areFiltersLoading}
+          title="Refine Results"
+          description={
+            <>
+              Select one or more categories or conditions to narrow your search.
+              Multiple selections in the same row are matched as “or,” and the
+              category and condition rows are combined as “and.”
+            </>
+          }
+          ariaLabelPrefix="Customer"
+        />
+      </div>
 
       <div className="browse-status">
         {vm.isLoading ? (
