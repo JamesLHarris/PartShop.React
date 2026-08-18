@@ -39,7 +39,11 @@ function ImageDropZone({
       return;
     }
 
-    onFilesChange?.(list);
+    // Add newly selected/dropped images to the current selection instead of
+    // replacing it. This keeps one-at-a-time drops and multi-file drops
+    // behaving the same way: every new drop is appended.
+    const currentFiles = Array.isArray(files) ? files : [];
+    onFilesChange?.([...currentFiles, ...list]);
   };
 
   const handleDrop = (e) => {

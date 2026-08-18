@@ -385,18 +385,37 @@ function AddItem() {
   };
 
   const setGalleryFromDropZone = (files) => {
-    setGalleryItems((prev) => {
-      revokePreviewUrls(prev);
+    const nextFiles = files || [];
 
-      return (files || []).map((file, index) => ({
-        id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-        rotation: 0,
-      }));
+    setGalleryItems((prev) => {
+      // Preserve preview URLs and rotation for files that are already in the
+      // gallery. ImageDropZone now appends new drops, so rebuilding every
+      // gallery item here would unnecessarily reset existing photo rotations.
+      const nextFileSet = new Set(nextFiles);
+      prev.forEach((item) => {
+        if (!nextFileSet.has(item.file) && item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+
+      return nextFiles.map((file, index) => {
+        const existing = prev.find((item) => item.file === file);
+        if (existing) {
+          return existing;
+        }
+
+        return {
+          id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          rotation: 0,
+        };
+      });
     });
 
-    setSelectedIndex(0);
+    setSelectedIndex((current) =>
+      nextFiles.length === 0 ? 0 : Math.min(current, nextFiles.length - 1),
+    );
   };
 
   const clearGallery = () => {
