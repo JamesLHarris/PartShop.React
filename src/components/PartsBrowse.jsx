@@ -3,11 +3,19 @@ import partsService from "../service/partsService";
 import toastr from "toastr";
 import { useEffect, useMemo, useRef, useState } from "react";
 import PartCard from "./PartCard";
+import BrowseFilterBar from "./BrowseFilterBar";
 import "./PartsBrowse.css";
 
 function PartsBrowse() {
-  const { filters, pageIndex, setPageIndex, pageSize, setPageSize, pageSizes } =
-    useOutletContext();
+  const {
+    filters,
+    handleHeaderChange,
+    pageIndex,
+    setPageIndex,
+    pageSize,
+    setPageSize,
+    pageSizes,
+  } = useOutletContext();
 
   const [vm, setVm] = useState({
     items: [],
@@ -28,7 +36,20 @@ function PartsBrowse() {
       const makeId = filters?.makeId ?? null;
       const modelId = filters?.modelId ?? null;
       const categoryId = filters?.categoryId ?? null;
-      const hasFilters = Boolean(q || makeId || modelId || categoryId);
+      const categoryIds = Array.isArray(filters?.categoryIds)
+        ? filters.categoryIds
+        : [];
+      const conditionIds = Array.isArray(filters?.conditionIds)
+        ? filters.conditionIds
+        : [];
+      const hasFilters = Boolean(
+        q ||
+          makeId ||
+          modelId ||
+          categoryId ||
+          categoryIds.length > 0 ||
+          conditionIds.length > 0,
+      );
 
       try {
         let response;
@@ -42,7 +63,11 @@ function PartsBrowse() {
             q: q || undefined,
             makeId,
             modelId,
-            categoryId,
+            // Prefer the multi-select category list when present. The legacy
+            // single categoryId is kept for older category-navigation links.
+            categoryId: categoryIds.length > 0 ? undefined : categoryId,
+            categoryIds,
+            conditionIds,
             availableId: 1,
           });
         } else {
@@ -92,6 +117,8 @@ function PartsBrowse() {
     filters?.makeId,
     filters?.modelId,
     filters?.categoryId,
+    filters?.categoryIds?.join(","),
+    filters?.conditionIds?.join(","),
     pageIndex,
     pageSize,
   ]);
@@ -127,11 +154,20 @@ function PartsBrowse() {
     filters?.makeId ||
       filters?.modelId ||
       filters?.categoryId ||
+      (Array.isArray(filters?.categoryIds) && filters.categoryIds.length > 0) ||
+      (Array.isArray(filters?.conditionIds) &&
+        filters.conditionIds.length > 0) ||
       (filters?.q ?? "").trim(),
   );
 
   return (
     <>
+      <BrowseFilterBar
+        filters={filters}
+        onChange={handleHeaderChange}
+        disabled={vm.isLoading}
+      />
+
       <div className="browse-status">
         {vm.isLoading ? (
           <span>Loading…</span>
