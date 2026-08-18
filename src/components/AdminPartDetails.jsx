@@ -849,11 +849,13 @@ function AdminPartDetails() {
       <section className="apd-layout">
         <div className="apd-grid">
           <aside className="apd-card apd-media">
-            {galleryMain ? (
-              <img src={galleryMain} alt={vm.name} className="apd-photo" />
-            ) : (
-              <div className="apd-photo apd-photo--empty">No Image</div>
-            )}
+            <div className="apd-main-image-container">
+              {galleryMain ? (
+                <img src={galleryMain} alt={vm.name} className="apd-photo" />
+              ) : (
+                <div className="apd-photo apd-photo--empty">No Image</div>
+              )}
+            </div>
 
             {images.length > 1 && (
               <div className="apd-gallery">
