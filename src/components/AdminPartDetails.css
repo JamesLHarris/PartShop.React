@@ -548,26 +548,32 @@
 }
 
 .apd-main-image-container {
-  display: grid;
-  place-items: center;
+  position: relative;
   width: 100%;
-  min-height: 420px;
-  padding: 18px;
+  padding: 0;
   overflow: hidden;
   border: 1px solid #303845;
   border-radius: 12px;
   background: #101317;
 }
 
-/* Keep the whole part visible instead of cropping it at the larger size. */
-.apd-media--customer .apd-photo {
+/* Let the photo determine the box height. This keeps the full image visible
+   while still filling the available width, so there is no forced 4:3 crop. */
+.apd-main-image-container .apd-photo {
+  display: block;
   width: 100%;
-  max-height: 720px;
-  aspect-ratio: 4 / 3;
+  height: auto;
+  max-height: none;
+  aspect-ratio: auto;
   object-fit: contain;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
+}
+
+.apd-main-image-container .apd-photo--empty {
+  display: grid;
+  place-items: center;
 }
 
 .apd-media--customer .apd-thumbs {
@@ -594,9 +600,6 @@
     grid-template-columns: 1fr;
   }
 
-  .apd-main-image-container {
-    min-height: 0;
-  }
 }
 
 .admin-part-header {

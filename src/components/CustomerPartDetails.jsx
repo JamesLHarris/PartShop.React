@@ -4,6 +4,7 @@ import partsService from "../service/partsService";
 import shopifyCheckoutService from "../service/shopifyCheckoutService";
 import "./AdminPartDetails.css";
 import { useCart } from "./CartContext";
+import PhotoLightbox from "./PhotoLightbox";
 
 const buildImageUrl = (img) =>
   !img
@@ -88,6 +89,7 @@ function CustomerPartDetails() {
   const [part, setPart] = useState(null);
   const [images, setImages] = useState([]);
   const [activeImage, setActiveImage] = useState("");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -161,6 +163,7 @@ function CustomerPartDetails() {
       model: p.modelName ?? get(p, "make", "model", "name"),
       year: p.year,
       partNumber: p.partnumber ?? p.partNumber,
+      brand: p.brand ?? p.Brand ?? "",
       availableStatus: p.availableStatus ?? get(p, "available", "status"),
       availableId: p.availableId ?? get(p, "available", "id"),
       conditionId: p.conditionId ?? get(p, "condition", "id"),
@@ -203,6 +206,30 @@ function CustomerPartDetails() {
   }
 
   const galleryMain = activeImage || vm.image;
+  const lightboxImages = [];
+  const seenLightboxImages = new Set();
+
+  const addLightboxImage = (src, alt) => {
+    if (!src || seenLightboxImages.has(src)) return;
+    seenLightboxImages.add(src);
+    lightboxImages.push({ src, alt });
+  };
+
+  images.forEach((img, imageIndex) => {
+    addLightboxImage(
+      buildImageUrl(img.url),
+      `${vm.name} photo ${imageIndex + 1}`,
+    );
+  });
+
+  if (galleryMain && !seenLightboxImages.has(galleryMain)) {
+    lightboxImages.unshift({ src: galleryMain, alt: vm.name });
+  }
+
+  const lightboxStartIndex = Math.max(
+    lightboxImages.findIndex((image) => image.src === galleryMain),
+    0,
+  );
   const conditionPolicy = getConditionPolicy(vm.conditionName);
 
   const handleBuyNow = async () => {
@@ -297,7 +324,14 @@ function CustomerPartDetails() {
           <aside className="apd-card apd-media apd-media--customer">
             <div className="apd-main-image-container">
               {galleryMain ? (
-                <img src={galleryMain} alt={vm.name} className="apd-photo" />
+                <button
+                  type="button"
+                  className="apd-main-image-button"
+                  aria-label={`Open photo viewer for ${vm.name}`}
+                  onClick={() => setLightboxOpen(true)}
+                >
+                  <img src={galleryMain} alt={vm.name} className="apd-photo" />
+                </button>
               ) : (
                 <div className="apd-photo apd-photo--empty">No Image</div>
               )}
@@ -450,6 +484,10 @@ function CustomerPartDetails() {
                 <dd>{vm.partNumber || "—"}</dd>
               </div>
               <div>
+                <dt>Brand</dt>
+                <dd>{vm.brand || "—"}</dd>
+              </div>
+              <div>
                 <dt>Year(s)</dt>
                 <dd>{vm.year || "—"}</dd>
               </div>
@@ -534,6 +572,17 @@ function CustomerPartDetails() {
           </article>
         </div>
       </section>
+
+      <PhotoLightbox
+        open={lightboxOpen}
+        images={lightboxImages}
+        startIndex={lightboxStartIndex}
+        title={`${vm.name} photos`}
+        onClose={() => setLightboxOpen(false)}
+        onImageChange={(src) => {
+          if (src) setActiveImage(src);
+        }}
+      />
     </div>
   );
 }

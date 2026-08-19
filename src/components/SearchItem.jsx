@@ -57,6 +57,156 @@ const toggleId = (values, id) => {
     : [...current, id].sort((left, right) => left - right);
 };
 
+export function SearchItemFilterPanel({
+  categories = [],
+  conditions = [],
+  selectedCategoryIds = [],
+  selectedConditionIds = [],
+  onToggleCategory,
+  onToggleCondition,
+  onClear,
+  disabled = false,
+  loading = false,
+  title = "Refine Inventory",
+  description = (
+    <>
+      Multiple selections in the same row are matched as “or.” The category and
+      condition rows are combined as “and.”
+    </>
+  ),
+  ariaLabelPrefix = "Admin",
+}) {
+  const cleanCategoryIds = cleanIds(selectedCategoryIds);
+  const cleanConditionIds = cleanIds(selectedConditionIds);
+
+  const sortedCategories = useMemo(
+    () =>
+      (Array.isArray(categories) ? categories : [])
+        .filter((item) => idOf(item) > 0 && nameOf(item))
+        .sort((left, right) =>
+          nameOf(left).localeCompare(nameOf(right), undefined, {
+            sensitivity: "base",
+          }),
+        ),
+    [categories],
+  );
+
+  const sortedConditions = useMemo(
+    () =>
+      (Array.isArray(conditions) ? conditions : [])
+        .filter((item) => idOf(item) > 0 && nameOf(item))
+        .sort((left, right) =>
+          nameOf(left).localeCompare(nameOf(right), undefined, {
+            sensitivity: "base",
+          }),
+        ),
+    [conditions],
+  );
+
+  const hasSelections =
+    cleanCategoryIds.length > 0 || cleanConditionIds.length > 0;
+
+  return (
+    <section className="locate-filter-panel" aria-label={title}>
+      <div className="locate-filter-heading">
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+
+        {hasSelections && (
+          <button
+            type="button"
+            className="locate-filter-clear"
+            onClick={onClear}
+            disabled={disabled}
+          >
+            Clear category &amp; condition
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="locate-filter-loading" role="status">
+          Loading inventory filters…
+        </div>
+      ) : (
+        <div className="locate-filter-groups">
+          <div className="locate-filter-group">
+            <div className="locate-filter-label">
+              <span>Categories</span>
+              {cleanCategoryIds.length > 0 && (
+                <small>{cleanCategoryIds.length} selected</small>
+              )}
+            </div>
+
+            <div
+              className="locate-filter-chips"
+              aria-label={`${ariaLabelPrefix} category filters`}
+            >
+              {sortedCategories.map((category) => {
+                const categoryId = idOf(category);
+                const selected = cleanCategoryIds.includes(categoryId);
+
+                return (
+                  <button
+                    key={categoryId}
+                    type="button"
+                    className={`locate-filter-chip ${
+                      selected ? "is-selected" : ""
+                    }`}
+                    aria-pressed={selected}
+                    onClick={() => onToggleCategory?.(categoryId)}
+                    disabled={disabled}
+                  >
+                    {nameOf(category)}
+                    {selected ? <span aria-hidden="true">✓</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="locate-filter-group">
+            <div className="locate-filter-label">
+              <span>Condition</span>
+              {cleanConditionIds.length > 0 && (
+                <small>{cleanConditionIds.length} selected</small>
+              )}
+            </div>
+
+            <div
+              className="locate-filter-chips"
+              aria-label={`${ariaLabelPrefix} condition filters`}
+            >
+              {sortedConditions.map((condition) => {
+                const conditionId = idOf(condition);
+                const selected = cleanConditionIds.includes(conditionId);
+
+                return (
+                  <button
+                    key={conditionId}
+                    type="button"
+                    className={`locate-filter-chip ${
+                      selected ? "is-selected" : ""
+                    }`}
+                    aria-pressed={selected}
+                    onClick={() => onToggleCondition?.(conditionId)}
+                    disabled={disabled}
+                  >
+                    {nameOf(condition)}
+                    {selected ? <span aria-hidden="true">✓</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SearchItem() {
   const [formData, setFormData] = useState({
     name: "",
@@ -121,30 +271,6 @@ function SearchItem() {
     };
   }, []);
 
-  const sortedCategories = useMemo(
-    () =>
-      categories
-        .filter((item) => idOf(item) > 0 && nameOf(item))
-        .sort((left, right) =>
-          nameOf(left).localeCompare(nameOf(right), undefined, {
-            sensitivity: "base",
-          }),
-        ),
-    [categories],
-  );
-
-  const sortedConditions = useMemo(
-    () =>
-      conditions
-        .filter((item) => idOf(item) > 0 && nameOf(item))
-        .sort((left, right) =>
-          nameOf(left).localeCompare(nameOf(right), undefined, {
-            sensitivity: "base",
-          }),
-        ),
-    [conditions],
-  );
-
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -205,9 +331,7 @@ function SearchItem() {
         return;
       }
 
-      let nextResults = Array.isArray(response?.item)
-        ? response.item
-        : [];
+      let nextResults = Array.isArray(response?.item) ? response.item : [];
 
       if (nameQuery && partNumberQuery) {
         const normalizedPartNumber = normalizeSearchText(partNumberQuery);
@@ -314,10 +438,7 @@ function SearchItem() {
     const maxButtons = 9;
     const start = Math.max(
       0,
-      Math.min(
-        pageIndex - Math.floor(maxButtons / 2),
-        totalPages - maxButtons,
-      ),
+      Math.min(pageIndex - Math.floor(maxButtons / 2), totalPages - maxButtons),
     );
     const end = Math.min(totalPages, start + maxButtons);
 
@@ -404,111 +525,19 @@ function SearchItem() {
           </div>
         </form>
 
-        <section
-          className="locate-filter-panel"
-          aria-labelledby="locate-filter-title"
-        >
-          <div className="locate-filter-heading">
-            <div>
-              <h2 id="locate-filter-title">Refine Inventory</h2>
-              <p>
-                Multiple selections in the same row are matched as “or.” The
-                category and condition rows are combined as “and.”
-              </p>
-            </div>
-
-            {hasFilterSelections && (
-              <button
-                type="button"
-                className="locate-filter-clear"
-                onClick={handleClearFilters}
-                disabled={isLoading}
-              >
-                Clear category &amp; condition
-              </button>
-            )}
-          </div>
-
-          {areFiltersLoading ? (
-            <div className="locate-filter-loading" role="status">
-              Loading inventory filters…
-            </div>
-          ) : (
-            <div className="locate-filter-groups">
-              <div className="locate-filter-group">
-                <div className="locate-filter-label">
-                  <span>Categories</span>
-                  {selectedCategoryIds.length > 0 && (
-                    <small>{selectedCategoryIds.length} selected</small>
-                  )}
-                </div>
-
-                <div
-                  className="locate-filter-chips"
-                  aria-label="Admin category filters"
-                >
-                  {sortedCategories.map((category) => {
-                    const categoryId = idOf(category);
-                    const selected =
-                      selectedCategoryIds.includes(categoryId);
-
-                    return (
-                      <button
-                        key={categoryId}
-                        type="button"
-                        className={`locate-filter-chip ${
-                          selected ? "is-selected" : ""
-                        }`}
-                        aria-pressed={selected}
-                        onClick={() => handleToggleCategory(categoryId)}
-                        disabled={isLoading}
-                      >
-                        {nameOf(category)}
-                        {selected ? <span aria-hidden="true">✓</span> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="locate-filter-group">
-                <div className="locate-filter-label">
-                  <span>Condition</span>
-                  {selectedConditionIds.length > 0 && (
-                    <small>{selectedConditionIds.length} selected</small>
-                  )}
-                </div>
-
-                <div
-                  className="locate-filter-chips"
-                  aria-label="Admin condition filters"
-                >
-                  {sortedConditions.map((condition) => {
-                    const conditionId = idOf(condition);
-                    const selected =
-                      selectedConditionIds.includes(conditionId);
-
-                    return (
-                      <button
-                        key={conditionId}
-                        type="button"
-                        className={`locate-filter-chip ${
-                          selected ? "is-selected" : ""
-                        }`}
-                        aria-pressed={selected}
-                        onClick={() => handleToggleCondition(conditionId)}
-                        disabled={isLoading}
-                      >
-                        {nameOf(condition)}
-                        {selected ? <span aria-hidden="true">✓</span> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
+        <SearchItemFilterPanel
+          categories={categories}
+          conditions={conditions}
+          selectedCategoryIds={selectedCategoryIds}
+          selectedConditionIds={selectedConditionIds}
+          onToggleCategory={handleToggleCategory}
+          onToggleCondition={handleToggleCondition}
+          onClear={handleClearFilters}
+          disabled={isLoading}
+          loading={areFiltersLoading}
+          title="Refine Inventory"
+          ariaLabelPrefix="Admin"
+        />
       </section>
 
       <section

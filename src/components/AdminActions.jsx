@@ -42,6 +42,15 @@ const OrdersIcon = () => (
   </svg>
 );
 
+
+const CatalogIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 5h16v14H4z" />
+    <path d="M8 9h8M8 13h5" />
+    <path d="M18 3v4M6 3v4" />
+  </svg>
+);
+
 const ACTIONS = [
   {
     key: "add",
@@ -66,6 +75,14 @@ const ACTIONS = [
     buttonText: "Manage",
     route: "/admin/discounts",
     icon: DiscountIcon,
+  },
+  {
+    key: "catalog",
+    title: "Catalog Setup",
+    description: "Add categories and make/model combinations used throughout the site.",
+    buttonText: "Manage",
+    route: "/admin/catalog-setup",
+    icon: CatalogIcon,
   },
   {
     key: "locate",
@@ -93,7 +110,7 @@ function AdminActions() {
       <header className="admin-actions-heading">
         <p className="admin-actions-eyebrow">Administration</p>
         <h1 id="admin-actions-title">Admin Action Panel</h1>
-        <p>Choose an inventory, order, discount, or refund workflow.</p>
+        <p>Choose an inventory, catalog, order, discount, or refund workflow.</p>
       </header>
 
       <section className="action-container" aria-label="Admin actions">

@@ -21,7 +21,7 @@ const deleteCatagory = (id) => {
 const addCatagory = (payload) => {
   const config = {
     method: "POST",
-    url: `${modelEndpoint}/add-catagory`,
+    url: modelEndpoint,
     data: payload,
     withCredentials: true,
     crossdomain: true,

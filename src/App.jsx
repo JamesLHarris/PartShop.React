@@ -20,6 +20,7 @@ import Home from "./components/Home";
 import AdminDiscounts from "./components/AdminDiscounts";
 import CategoryLanding from "./components/CategoryLanding";
 import Policies from "./components/Policies";
+import AdminReferenceData from "./components/AdminReferenceData";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path="/browse/part/:id" element={<CustomerPartDetails />} />
             <Route path="/admin/refunds" element={<AdminRefunds />} />
             <Route path="/admin/discounts" element={<AdminDiscounts />} />
+            <Route path="/admin/catalog-setup" element={<AdminReferenceData />} />
             <Route
               path="/returns/request"
               element={<CustomerReturnRequest />}

@@ -18,6 +18,7 @@ const initialForm = {
   name: "",
   year: "",
   partNumber: "",
+  brand: "",
   description: "",
   price: "",
   quantity: "1",
@@ -319,6 +320,7 @@ function AddItem() {
       name: safeString(sourcePart.name),
       year: primaryYearText,
       partNumber: safeString(sourcePart.partnumber ?? sourcePart.partNumber),
+      brand: safeString(sourcePart.brand ?? sourcePart.Brand),
       description: safeString(sourcePart.description),
       price: safeString(sourcePart.price),
       quantity: safeString(sourcePart.quantity ?? "1"),
@@ -383,18 +385,37 @@ function AddItem() {
   };
 
   const setGalleryFromDropZone = (files) => {
-    setGalleryItems((prev) => {
-      revokePreviewUrls(prev);
+    const nextFiles = files || [];
 
-      return (files || []).map((file, index) => ({
-        id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-        rotation: 0,
-      }));
+    setGalleryItems((prev) => {
+      // Preserve preview URLs and rotation for files that are already in the
+      // gallery. ImageDropZone now appends new drops, so rebuilding every
+      // gallery item here would unnecessarily reset existing photo rotations.
+      const nextFileSet = new Set(nextFiles);
+      prev.forEach((item) => {
+        if (!nextFileSet.has(item.file) && item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+
+      return nextFiles.map((file, index) => {
+        const existing = prev.find((item) => item.file === file);
+        if (existing) {
+          return existing;
+        }
+
+        return {
+          id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          rotation: 0,
+        };
+      });
     });
 
-    setSelectedIndex(0);
+    setSelectedIndex((current) =>
+      nextFiles.length === 0 ? 0 : Math.min(current, nextFiles.length - 1),
+    );
   };
 
   const clearGallery = () => {
@@ -598,6 +619,9 @@ function AddItem() {
     }
     payload.append("ShippingPolicyId", formData.shippingPolicyId);
     payload.append("PartNumber", formData.partNumber.trim());
+    if (String(formData.brand || "").trim()) {
+      payload.append("Brand", formData.brand.trim());
+    }
     payload.append("Description", formData.description.trim());
     payload.append("Price", formData.price);
     payload.append("Quantity", formData.quantity || "1");
@@ -888,6 +912,20 @@ function AddItem() {
                     value={formData.partNumber}
                     onChange={handleChange}
                     className="apd-input"
+                  />
+                </dd>
+              </div>
+
+              <div>
+                <dt>Brand <span className="apd-subtle">(optional)</span></dt>
+                <dd>
+                  <input
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    className="apd-input"
+                    maxLength={128}
+                    placeholder="e.g. Bosch, Mahle, Lemförder"
                   />
                 </dd>
               </div>

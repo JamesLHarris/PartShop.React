@@ -21,7 +21,20 @@ const deleteMake = (id) => {
 const addMake = (payload) => {
   const config = {
     method: "POST",
-    url: `${makeEndpoint}/add-new`,
+    url: makeEndpoint,
+    data: payload,
+    withCredentials: true,
+    crossdomain: true,
+    headers: { "Content-Type": "application/json" },
+  };
+  return axios(config).then(onGlobalSuccess).catch(onGlobalError);
+};
+
+
+const addMakeModel = (payload) => {
+  const config = {
+    method: "POST",
+    url: `${makeEndpoint}/make-model`,
     data: payload,
     withCredentials: true,
     crossdomain: true,
@@ -66,6 +79,7 @@ const getAllCompanies = () => {
 const makeService = {
   deleteMake,
   addMake,
+  addMakeModel,
   getMakeById,
   getAllMakes,
   getAllCompanies,

@@ -303,3 +303,15 @@
     flex: 0 0 auto;
   }
 }
+
+
+/*
+ * Customer Browse reuses the exact category/condition chip panel exported
+ * by SearchItem.jsx. The outer Browse shell provides the card surface, so
+ * remove the admin panel's internal divider spacing when embedded here.
+ */
+.customer-search-item-filters .locate-filter-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
